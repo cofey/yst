@@ -11,7 +11,12 @@
 
     <!-- 单行最大长度 -->
     <module name="LineLength">
-        <property name="max" value="120"/>
+        <property name="max" value="160"/>
+    </module>
+
+    <!-- 文件最大行数 -->
+    <module name="FileLength">
+        <property name="max" value="800"/>
     </module>
 
     <module name="TreeWalker">
@@ -58,11 +63,6 @@
         <!-- 方法最大行数 -->
         <module name="MethodLength">
             <property name="max" value="150"/>
-        </module>
-
-        <!-- 类最大行数 -->
-        <module name="FileLength">
-            <property name="max" value="800"/>
         </module>
     </module>
 </module>

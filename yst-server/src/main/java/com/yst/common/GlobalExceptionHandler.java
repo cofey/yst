@@ -15,10 +15,11 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(e.getMessage());
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class,
-            ConstraintViolationException.class, HttpMessageNotReadableException.class})
-    public ApiResponse<Void> handleValid(Exception e) {
-        return ApiResponse.fail("请求参数错误: " + e.getMessage());
+    @ExceptionHandler({MethodArgumentNotValidException.class,
+            BindException.class,
+            ConstraintViolationException.class,
+            HttpMessageNotReadableException.class})
+    public ApiResponse<Void> handleValid(Exception e) {return ApiResponse.fail("请求参数错误: " + e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
