@@ -1,10 +1,13 @@
 #!/bin/sh
 set -e
 
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 echo "[Gate] 后端检查..."
-( cd ../yst-server && mvn clean verify )
+( cd "${REPO_ROOT}/yst-server" && mvn clean verify )
 
 echo "[Gate] 前端检查..."
-( cd ../yst-ui && npm run check )
+( cd "${REPO_ROOT}/yst-ui" && npm run check )
 
 echo "[Gate] 全部通过，允许 push"
