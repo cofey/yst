@@ -5,6 +5,7 @@ import com.yst.service.UserService;
 import com.yst.vo.UserSaveRequest;
 import com.yst.vo.UserUpdateRequest;
 import com.yst.vo.UserVO;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +27,7 @@ public class UserController {
 
     private final UserService userService;
 
+    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring manages bean lifecycle for injected dependencies")
     public UserController(UserService userService) {
         this.userService = userService;
     }

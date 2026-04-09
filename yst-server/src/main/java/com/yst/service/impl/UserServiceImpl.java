@@ -84,7 +84,8 @@ public class UserServiceImpl implements UserService {
         user.setNickname(request.getNickname());
         user.setEmail(request.getEmail());
         user.setPhone(request.getPhone());
-        user.setStatus(request.getStatus() == null ? 1 : request.getStatus());
+        Integer requestStatus = request.getStatus();
+        user.setStatus(requestStatus != null ? requestStatus : Integer.valueOf(1));
         String rawPassword = StringUtils.hasText(request.getPassword()) ? request.getPassword() : DEFAULT_PASSWORD;
         user.setPassword(passwordEncoder.encode(rawPassword));
         user.setCreateTime(LocalDateTime.now());
@@ -148,7 +149,8 @@ public class UserServiceImpl implements UserService {
             user.setNickname(row.getNickname());
             user.setEmail(row.getEmail());
             user.setPhone(row.getPhone());
-            user.setStatus(row.getStatus() == null ? 1 : row.getStatus());
+            Integer rowStatus = row.getStatus();
+            user.setStatus(rowStatus != null ? rowStatus : Integer.valueOf(1));
             user.setUpdateTime(LocalDateTime.now());
             if (user.getId() == null) {
                 sysUserMapper.insert(user);
