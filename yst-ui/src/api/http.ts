@@ -3,7 +3,7 @@ import { ElMessage } from "element-plus";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
 import type { AxiosRequestConfig } from "axios";
-import type { ApiResponse } from "@/types";
+import type { ApiResponse } from "@/shared/types/api";
 
 const http = axios.create({
   baseURL: "/api",
@@ -11,7 +11,18 @@ const http = axios.create({
 });
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  let token = "";
+  const rawUser = localStorage.getItem("user");
+  if (rawUser) {
+    try {
+      token = JSON.parse(rawUser)?.token || "";
+    } catch {
+      token = "";
+    }
+  }
+  if (!token) {
+    token = localStorage.getItem("token") || "";
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -24,6 +35,8 @@ http.interceptors.response.use(undefined, (error) => {
     authStore.clearAuth();
     ElMessage.error("登录已失效，请重新登录");
     router.push("/login");
+  } else if (error.response?.status === 403) {
+    ElMessage.error(error.response?.data?.message || "无权限访问");
   } else {
     ElMessage.error(error.response?.data?.message || error.message || "网络异常");
   }

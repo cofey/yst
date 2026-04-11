@@ -4,19 +4,25 @@ server:
 spring:
   application:
     name: yst-server
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/yst?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://192.168.3.188:3308/yst?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
     username: root
-    password: 123456
+    password: e3cb93ddff99178c
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
   data:
     redis:
-      host: 127.0.0.1
+      host: 192.168.3.188
       port: 6379
       database: 0
+      password: Bo151207
 
 mybatis-plus:
   configuration:

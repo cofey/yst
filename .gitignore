@@ -1,5 +1,7 @@
 # OS
 .DS_Store
+SmartST2020/
+.pnpm-store/
 
 # Build
 target/
@@ -12,13 +14,10 @@ tools/sonarqube
 # Frontend
 yst-ui/node_modules/
 yst-ui/dist/
+yst-ui/pnpm-lock.yaml
 
 # Backend
 yst-server/target/
 
 # Logs
 *.log
-
-# Env
-.env
-.env.*

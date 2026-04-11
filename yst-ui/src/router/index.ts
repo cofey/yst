@@ -1,27 +1,22 @@
 import { createRouter, createWebHistory } from "vue-router";
+import { ElMessage } from "element-plus";
 import { useAuthStore } from "@/stores/auth";
-import LoginView from "@/views/LoginView.vue";
-import UserView from "@/views/UserView.vue";
+import { authRoutes } from "@/router/modules/auth";
+import { systemRoutes } from "@/router/modules/system";
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    {
-      path: "/login",
-      name: "login",
-      component: LoginView
-    },
+    ...authRoutes,
     {
       path: "/",
-      redirect: "/users"
+      redirect: "/home"
     },
-    {
-      path: "/users",
-      name: "users",
-      component: UserView
-    }
+    ...systemRoutes
   ]
 });
+
+let lastWarnedNoPermPath = "";
 
 router.beforeEach((to) => {
   const authStore = useAuthStore();
@@ -29,7 +24,15 @@ router.beforeEach((to) => {
     return "/login";
   }
   if (to.path === "/login" && authStore.token) {
-    return "/users";
+    return "/home";
+  }
+  if (to.path !== "/login" && !authStore.hasMenuPath(to.path)) {
+    if (lastWarnedNoPermPath !== to.path) {
+      ElMessage.warning("当前访问的页面不在你的权限内");
+      lastWarnedNoPermPath = to.path;
+    }
+  } else {
+    lastWarnedNoPermPath = "";
   }
   return true;
 });
