@@ -41,3 +41,7 @@ export function updateMenuApi(
 export function deleteMenuApi(menuId: string) {
   return httpRequest.delete<void>(`/menus/${menuId}`);
 }
+
+export function clearAllMenuAuthCacheApi() {
+  return httpRequest.delete<void>("/menus/cache/all");
+}

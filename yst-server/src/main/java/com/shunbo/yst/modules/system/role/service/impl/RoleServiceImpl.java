@@ -11,11 +11,13 @@ import com.shunbo.yst.modules.system.user.entity.SysUserRole;
 import com.shunbo.yst.modules.system.menu.mapper.SysMenuMapper;
 import com.shunbo.yst.modules.system.role.mapper.SysRoleMapper;
 import com.shunbo.yst.modules.system.role.mapper.SysRoleMenuMapper;
+import com.shunbo.yst.modules.system.user.mapper.SysUserMapper;
 import com.shunbo.yst.modules.system.user.mapper.SysUserRoleMapper;
 import com.shunbo.yst.modules.system.role.service.RoleService;
 import com.shunbo.yst.modules.system.role.vo.RoleQueryRequest;
 import com.shunbo.yst.modules.system.role.vo.RoleSaveRequest;
 import com.shunbo.yst.modules.system.role.vo.RoleUpdateRequest;
+import com.shunbo.yst.security.AuthPermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -37,6 +39,8 @@ public class RoleServiceImpl implements RoleService {
     private final SysRoleMenuMapper sysRoleMenuMapper;
     private final SysUserRoleMapper sysUserRoleMapper;
     private final SysMenuMapper sysMenuMapper;
+    private final SysUserMapper sysUserMapper;
+    private final AuthPermissionService authPermissionService;
 
     @Override
     public PageResult<SysRole> list(RoleQueryRequest query) {
@@ -96,6 +100,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void update(String roleId, RoleUpdateRequest request) {
         SysRole role = getEnabledRole(roleId);
+        List<String> userIds = sysUserMapper.selectUserIdsByRoleId(roleId);
         checkRoleKeyUnique(request.getRoleKey(), roleId);
         role.setRoleName(request.getRoleName());
         role.setRoleKey(request.getRoleKey());
@@ -104,17 +109,20 @@ public class RoleServiceImpl implements RoleService {
         }
         role.setUpdateTime(LocalDateTime.now());
         sysRoleMapper.updateById(role);
+        authPermissionService.evictLoginUsers(userIds);
     }
 
     @Override
     public void delete(String roleId) {
         SysRole role = getEnabledRole(roleId);
+        List<String> userIds = sysUserMapper.selectUserIdsByRoleId(roleId);
         if ("admin".equals(role.getRoleKey())) {
             throw new BizException("超级管理员角色不允许删除");
         }
         sysRoleMenuMapper.deleteByRoleId(roleId);
         sysUserRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, roleId));
         sysRoleMapper.deleteById(roleId);
+        authPermissionService.evictLoginUsers(userIds);
     }
 
     @Override
@@ -126,9 +134,11 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public void assignMenus(String roleId, List<String> menuIds) {
         getEnabledRole(roleId);
+        List<String> userIds = sysUserMapper.selectUserIdsByRoleId(roleId);
         Set<String> normalizedIds = normalizeMenuIds(menuIds);
         sysRoleMenuMapper.deleteByRoleId(roleId);
         if (normalizedIds.isEmpty()) {
+            authPermissionService.evictLoginUsers(userIds);
             return;
         }
         for (String menuId : normalizedIds) {
@@ -137,6 +147,7 @@ public class RoleServiceImpl implements RoleService {
             roleMenu.setMenuId(menuId);
             sysRoleMenuMapper.insert(roleMenu);
         }
+        authPermissionService.evictLoginUsers(userIds);
     }
 
     private Set<String> normalizeMenuIds(List<String> menuIds) {

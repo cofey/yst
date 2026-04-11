@@ -32,4 +32,8 @@ public interface DictService {
     void deleteData(String dictCode);
 
     List<DictOptionVO> listEnabledOptionsByType(String dictType);
+
+    void clearCacheByType(String dictType);
+
+    void clearAllCache();
 }

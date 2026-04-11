@@ -1,23 +1,36 @@
 package com.shunbo.yst.security;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shunbo.yst.modules.system.user.entity.SysUser;
 import com.shunbo.yst.modules.system.user.mapper.SysUserMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
+import java.time.Duration;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
+@RequiredArgsConstructor
 public class AuthPermissionService {
 
-    private final SysUserMapper sysUserMapper;
+    private static final String LOGIN_USER_CACHE_KEY_PREFIX = "auth:login_user:";
+    private static final Duration LOGIN_USER_CACHE_TTL = Duration.ofMinutes(30);
 
-    public AuthPermissionService(SysUserMapper sysUserMapper) {
-        this.sysUserMapper = sysUserMapper;
-    }
+    private final SysUserMapper sysUserMapper;
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public LoginUser loadLoginUser(String userId) {
+        LoginUser cache = getCache(userId);
+        if (cache != null) {
+            return cache;
+        }
         SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUserId, userId)
                 .eq(SysUser::getStatus, 1)
@@ -30,6 +43,7 @@ public class AuthPermissionService {
         loginUser.setUsername(user.getUsername());
         loginUser.setRoles(new HashSet<>(sysUserMapper.selectRoleKeysByUserId(userId)));
         loginUser.setPermissions(new HashSet<>(sysUserMapper.selectPermissionsByUserId(userId)));
+        putCache(userId, loginUser);
         return loginUser;
     }
 
@@ -39,5 +53,78 @@ public class AuthPermissionService {
 
     public List<String> listPermissions(String userId) {
         return sysUserMapper.selectPermissionsByUserId(userId);
+    }
+
+    public void evictLoginUser(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return;
+        }
+        try {
+            redisTemplate.delete(buildLoginUserKey(userId));
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void evictLoginUsers(Collection<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return;
+        }
+        Set<String> keys = new HashSet<>();
+        for (String userId : userIds) {
+            if (StringUtils.hasText(userId)) {
+                keys.add(buildLoginUserKey(userId));
+            }
+        }
+        if (keys.isEmpty()) {
+            return;
+        }
+        try {
+            redisTemplate.delete(keys);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void evictAllLoginUsers() {
+        try {
+            Set<String> keys = redisTemplate.keys(LOGIN_USER_CACHE_KEY_PREFIX + "*");
+            if (keys == null || keys.isEmpty()) {
+                return;
+            }
+            redisTemplate.delete(keys);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private LoginUser getCache(String userId) {
+        if (!StringUtils.hasText(userId)) {
+            return null;
+        }
+        try {
+            String raw = redisTemplate.opsForValue().get(buildLoginUserKey(userId));
+            if (!StringUtils.hasText(raw)) {
+                return null;
+            }
+            return objectMapper.readValue(raw, LoginUser.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void putCache(String userId, LoginUser loginUser) {
+        if (!StringUtils.hasText(userId) || loginUser == null) {
+            return;
+        }
+        try {
+            redisTemplate.opsForValue().set(
+                    buildLoginUserKey(userId),
+                    objectMapper.writeValueAsString(loginUser),
+                    LOGIN_USER_CACHE_TTL
+            );
+        } catch (Exception ignored) {
+        }
+    }
+
+    private String buildLoginUserKey(String userId) {
+        return LOGIN_USER_CACHE_KEY_PREFIX + userId;
     }
 }

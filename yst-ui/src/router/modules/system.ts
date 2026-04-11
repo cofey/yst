@@ -11,36 +11,79 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/home",
     name: "home",
-    component: HomePage
+    component: HomePage,
+    meta: {
+      title: "首页",
+      affix: true,
+      cache: true,
+      tab: true,
+      keepAliveName: "HomePage"
+    }
   },
   {
     path: "/system/users",
     name: "users",
-    component: UserPage
+    component: UserPage,
+    meta: {
+      title: "用户管理",
+      cache: true,
+      tab: true,
+      keepAliveName: "SystemUserPage"
+    }
   },
   {
     path: "/system/roles",
     name: "roles",
-    component: RolePage
+    component: RolePage,
+    meta: {
+      title: "角色管理",
+      cache: true,
+      tab: true,
+      keepAliveName: "SystemRolePage"
+    }
   },
   {
     path: "/system/menus",
     name: "menus",
-    component: MenuPage
+    component: MenuPage,
+    meta: {
+      title: "菜单管理",
+      cache: true,
+      tab: true,
+      keepAliveName: "SystemMenuPage"
+    }
   },
   {
     path: "/system/companies",
     name: "companies",
-    component: CompanyPage
+    component: CompanyPage,
+    meta: {
+      title: "单位管理",
+      cache: true,
+      tab: true,
+      keepAliveName: "SystemCompanyPage"
+    }
   },
   {
     path: "/system/dicts",
     name: "dicts",
-    component: DictPage
+    component: DictPage,
+    meta: {
+      title: "字典管理",
+      cache: true,
+      tab: true,
+      keepAliveName: "SystemDictTypePage"
+    }
   },
   {
     path: "/system/dicts/:dictType/data",
     name: "dict-data",
-    component: DictDataPage
+    component: DictDataPage,
+    meta: {
+      title: "字典数据",
+      cache: true,
+      tab: true,
+      keepAliveName: "SystemDictDataPage"
+    }
   }
 ];

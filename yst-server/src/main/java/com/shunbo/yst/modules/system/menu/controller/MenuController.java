@@ -52,4 +52,11 @@ public class MenuController {
         menuService.delete(menuId);
         return ApiResponse.ok();
     }
+
+    @DeleteMapping("/cache/all")
+    @PreAuthorize("@ss.hasPermi('system:menu:edit')")
+    public ApiResponse<Void> clearAllCache() {
+        menuService.clearAllCache();
+        return ApiResponse.ok();
+    }
 }

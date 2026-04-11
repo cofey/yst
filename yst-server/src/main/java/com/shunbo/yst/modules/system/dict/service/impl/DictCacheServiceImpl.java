@@ -5,9 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shunbo.yst.modules.system.dict.service.DictCacheService;
 import com.shunbo.yst.modules.system.dict.vo.DictOptionVO;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +59,26 @@ public class DictCacheServiceImpl implements DictCacheService {
         }
         try {
             redisTemplate.delete(buildKey(dictType));
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    public void evictAllDictOptions() {
+        try {
+            redisTemplate.execute((RedisCallback<Void>) connection -> {
+                ScanOptions options = ScanOptions.scanOptions().match(KEY_PREFIX + "*").count(200).build();
+                List<byte[]> keys = new ArrayList<>();
+                try (var cursor = connection.scan(options)) {
+                    while (cursor.hasNext()) {
+                        keys.add(cursor.next());
+                    }
+                }
+                if (!keys.isEmpty()) {
+                    connection.del(keys.toArray(new byte[0][]));
+                }
+                return null;
+            });
         } catch (Exception ignored) {
         }
     }

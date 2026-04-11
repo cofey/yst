@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import type { Component } from "vue";
 import * as EpIcons from "@element-plus/icons-vue";
 import { Menu } from "@element-plus/icons-vue";
 import type { AuthMenu } from "@/modules/auth/types";
@@ -43,6 +44,6 @@ const menuIcon = computed(() => {
   if (!iconName) {
     return Menu;
   }
-  return (EpIcons as Record<string, any>)[iconName] || Menu;
+  return (EpIcons as Record<string, Component>)[iconName] || Menu;
 });
 </script>

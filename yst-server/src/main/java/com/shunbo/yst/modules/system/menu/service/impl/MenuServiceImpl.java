@@ -9,6 +9,7 @@ import com.shunbo.yst.modules.system.menu.service.MenuService;
 import com.shunbo.yst.modules.system.menu.vo.MenuSaveRequest;
 import com.shunbo.yst.modules.system.menu.vo.MenuTreeVO;
 import com.shunbo.yst.modules.system.menu.vo.MenuUpdateRequest;
+import com.shunbo.yst.security.AuthPermissionService;
 import com.shunbo.yst.security.CurrentUserUtils;
 import com.shunbo.yst.security.LoginUser;
 import org.springframework.beans.BeanUtils;
@@ -29,6 +30,7 @@ public class MenuServiceImpl implements MenuService {
 
     private final SysMenuMapper sysMenuMapper;
     private final SysRoleMenuMapper sysRoleMenuMapper;
+    private final AuthPermissionService authPermissionService;
 
     @Override
     public List<SysMenu> list() {
@@ -59,6 +61,7 @@ public class MenuServiceImpl implements MenuService {
         menu.setCreateTime(LocalDateTime.now());
         menu.setUpdateTime(LocalDateTime.now());
         sysMenuMapper.insert(menu);
+        authPermissionService.evictAllLoginUsers();
     }
 
     @Override
@@ -74,6 +77,7 @@ public class MenuServiceImpl implements MenuService {
                 request.getSort());
         menu.setUpdateTime(LocalDateTime.now());
         sysMenuMapper.updateById(menu);
+        authPermissionService.evictAllLoginUsers();
     }
 
     @Override
@@ -92,6 +96,12 @@ public class MenuServiceImpl implements MenuService {
             throw new BizException("菜单已被角色引用，无法删除");
         }
         sysMenuMapper.deleteById(menuId);
+        authPermissionService.evictAllLoginUsers();
+    }
+
+    @Override
+    public void clearAllCache() {
+        authPermissionService.evictAllLoginUsers();
     }
 
     private void validateMenuType(String menuType) {

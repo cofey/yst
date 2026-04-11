@@ -92,4 +92,18 @@ public class DictController {
     public ApiResponse<List<DictOptionVO>> listByType(@PathVariable String dictType) {
         return ApiResponse.ok(dictService.listEnabledOptionsByType(dictType));
     }
+
+    @DeleteMapping("/cache/type/{dictType}")
+    @PreAuthorize("@ss.hasPermi('system:dict:edit')")
+    public ApiResponse<Void> clearCacheByType(@PathVariable String dictType) {
+        dictService.clearCacheByType(dictType);
+        return ApiResponse.ok();
+    }
+
+    @DeleteMapping("/cache/all")
+    @PreAuthorize("@ss.hasPermi('system:dict:edit')")
+    public ApiResponse<Void> clearAllCache() {
+        dictService.clearAllCache();
+        return ApiResponse.ok();
+    }
 }

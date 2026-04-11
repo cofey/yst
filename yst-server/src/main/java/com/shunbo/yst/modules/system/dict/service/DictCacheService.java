@@ -11,4 +11,6 @@ public interface DictCacheService {
     void putDictOptions(String dictType, List<DictOptionVO> options);
 
     void evictDictOptions(String dictType);
+
+    void evictAllDictOptions();
 }

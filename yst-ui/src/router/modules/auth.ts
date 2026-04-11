@@ -5,6 +5,11 @@ export const authRoutes: RouteRecordRaw[] = [
   {
     path: "/login",
     name: "login",
-    component: LoginPage
+    component: LoginPage,
+    meta: {
+      title: "登录",
+      tab: false,
+      cache: false
+    }
   }
 ];

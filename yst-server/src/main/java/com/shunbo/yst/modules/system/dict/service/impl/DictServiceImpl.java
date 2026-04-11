@@ -189,6 +189,19 @@ public class DictServiceImpl implements DictService {
         return options;
     }
 
+    @Override
+    public void clearCacheByType(String dictType) {
+        if (!StringUtils.hasText(dictType)) {
+            throw new BizException("dictType 不能为空");
+        }
+        dictCacheService.evictDictOptions(dictType);
+    }
+
+    @Override
+    public void clearAllCache() {
+        dictCacheService.evictAllDictOptions();
+    }
+
     private void checkTypeUnique(String dictType, String excludeDictId) {
         LambdaQueryWrapper<SysDictType> wrapper = new LambdaQueryWrapper<SysDictType>()
                 .eq(SysDictType::getDictType, dictType);

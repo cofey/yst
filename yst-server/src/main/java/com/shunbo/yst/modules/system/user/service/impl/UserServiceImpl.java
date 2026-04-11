@@ -13,6 +13,7 @@ import com.shunbo.yst.modules.system.user.mapper.SysUserCompanyMapper;
 import com.shunbo.yst.modules.system.user.mapper.SysUserMapper;
 import com.shunbo.yst.modules.system.user.mapper.SysUserRoleMapper;
 import com.shunbo.yst.security.CurrentUserUtils;
+import com.shunbo.yst.security.AuthPermissionService;
 import com.shunbo.yst.security.JwtTokenUtil;
 import com.shunbo.yst.security.LoginUser;
 import com.shunbo.yst.modules.system.user.service.UserService;
@@ -52,6 +53,7 @@ public class UserServiceImpl implements UserService {
     private final SysUserCompanyMapper sysUserCompanyMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenUtil jwtTokenUtil;
+    private final AuthPermissionService authPermissionService;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -68,6 +70,7 @@ public class UserServiceImpl implements UserService {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setUpdateTime(LocalDateTime.now());
             sysUserMapper.updateById(user);
+            authPermissionService.evictLoginUser(user.getUserId());
         }
         String token = jwtTokenUtil.generateToken(user.getUserId(), user.getUsername());
         return new LoginResponse(user.getUserId(), token, user.getUsername());
@@ -191,6 +194,7 @@ public class UserServiceImpl implements UserService {
         sysUserMapper.updateById(user);
         saveUserRoles(userId, request.getRoleIds());
         saveUserCompanies(userId, request.getCompanyIds());
+        authPermissionService.evictLoginUser(userId);
     }
 
     @Override
@@ -201,6 +205,7 @@ public class UserServiceImpl implements UserService {
         }
         clearUserRelations(userId);
         sysUserMapper.deleteById(userId);
+        authPermissionService.evictLoginUser(userId);
     }
 
     @Override
@@ -216,12 +221,14 @@ public class UserServiceImpl implements UserService {
             throw new BizException("读取Excel失败: " + e.getMessage());
         }
 
+        List<String> updatedUserIds = new ArrayList<>();
         for (UserExcelRow row : rows) {
             if (!StringUtils.hasText(row.getUsername()) || !StringUtils.hasText(row.getNickname())) {
                 continue;
             }
             SysUser user = sysUserMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                     .eq(SysUser::getUsername, row.getUsername()));
+            boolean exists = user != null;
             if (user == null) {
                 user = new SysUser();
                 user.setUserId(UUID.randomUUID().toString());
@@ -235,12 +242,14 @@ public class UserServiceImpl implements UserService {
             Integer rowStatus = row.getStatus();
             user.setStatus(rowStatus != null ? rowStatus : 1);
             user.setUpdateTime(LocalDateTime.now());
-            if (user.getUserId() == null) {
+            if (!exists) {
                 sysUserMapper.insert(user);
             } else {
                 sysUserMapper.updateById(user);
+                updatedUserIds.add(user.getUserId());
             }
         }
+        authPermissionService.evictLoginUsers(updatedUserIds);
     }
 
     @Override

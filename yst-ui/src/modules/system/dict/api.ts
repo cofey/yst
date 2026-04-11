@@ -94,3 +94,11 @@ export function deleteDictDataApi(dictCode: string) {
 export function listDictOptionsApi(dictType: string) {
   return httpRequest.get<DictOptionItem[]>(`/dict/data/type/${dictType}`);
 }
+
+export function clearDictTypeCacheApi(dictType: string) {
+  return httpRequest.delete<void>(`/dict/cache/type/${dictType}`);
+}
+
+export function clearAllDictCacheApi() {
+  return httpRequest.delete<void>("/dict/cache/all");
+}

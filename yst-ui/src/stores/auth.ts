@@ -58,7 +58,9 @@ function persistStorageState(state: AuthState) {
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(state));
 }
 
-export const useAuthStore = defineStore<"auth", AuthState, {}, AuthActions>("auth", {
+export const useAuthStore = defineStore<"auth", AuthState, Record<string, never>, AuthActions>(
+  "auth",
+  {
   state: (): AuthState => readStorageState(),
   actions: {
     setAuth(payload: {
@@ -121,4 +123,5 @@ export const useAuthStore = defineStore<"auth", AuthState, {}, AuthActions>("aut
       localStorage.removeItem("menus");
     }
   }
-});
+}
+);

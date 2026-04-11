@@ -25,7 +25,7 @@
       <div class="topbar-right">
         <el-dropdown trigger="click">
           <div class="user-info">
-            <el-avatar :size="32">{{ avatarText }}</el-avatar>
+            <el-avatar :size="29">{{ avatarText }}</el-avatar>
             <span class="username">{{ displayName }}</span>
           </div>
           <template #dropdown>
@@ -36,23 +36,74 @@
         </el-dropdown>
       </div>
     </header>
+    <section class="tabbar">
+      <el-button
+        class="tab-switch-btn"
+        :disabled="!canSwitchPrev"
+        circle
+        @click="switchTabByStep(-1)"
+      >
+        <el-icon><ArrowLeft /></el-icon>
+      </el-button>
+      <div class="tabs-track">
+        <el-tabs
+          :model-value="tabsStore.activeTabKey"
+          type="card"
+          class="app-tabs"
+          @tab-change="handleTabChange"
+          @tab-remove="handleTabRemove"
+        >
+          <el-tab-pane
+            v-for="tab in tabsStore.visitedTabs"
+            :key="tab.key"
+            :label="tab.title"
+            :name="tab.key"
+            :closable="tab.closable && tabsStore.visitedTabs.length > 1"
+          />
+        </el-tabs>
+      </div>
+      <el-button
+        class="tab-switch-btn"
+        :disabled="!canSwitchNext"
+        circle
+        @click="switchTabByStep(1)"
+      >
+        <el-icon><ArrowRight /></el-icon>
+      </el-button>
+    </section>
     <main class="app-main">
-      <router-view />
+      <router-view v-slot="{ Component, route: viewRoute }">
+        <KeepAlive :include="tabsStore.cachedViewKeys">
+          <component
+            :is="Component"
+            v-if="Component && shouldCache(viewRoute)"
+            :key="buildTabKey(viewRoute)"
+          />
+        </KeepAlive>
+        <component
+          :is="Component"
+          v-if="Component && !shouldCache(viewRoute)"
+          :key="buildTabKey(viewRoute)"
+        />
+      </router-view>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, watch } from "vue";
 import { ElMessage } from "element-plus";
-import { useRoute, useRouter } from "vue-router";
+import { ArrowLeft, ArrowRight } from "@element-plus/icons-vue";
+import { useRoute, useRouter, type RouteLocationNormalizedLoaded } from "vue-router";
 import type { AuthMenu } from "@/modules/auth/types";
 import TopNavMenuNode from "@/components/layout/TopNavMenuNode.vue";
 import { useAuthStore } from "@/stores/auth";
+import { buildTabKey, useTabsStore } from "@/stores/tabs";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const tabsStore = useTabsStore();
 
 const isLoginPage = computed(() => route.path === "/login");
 const collectMenuPaths = (menus: AuthMenu[]): string[] => {
@@ -78,6 +129,17 @@ const activeMenu = computed(() => {
 });
 const displayName = computed(() => authStore.username || "管理员");
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase());
+const activeTabIndex = computed(() =>
+  tabsStore.visitedTabs.findIndex((tab) => tab.key === tabsStore.activeTabKey)
+);
+const canSwitchPrev = computed(
+  () => tabsStore.visitedTabs.length > 1 && activeTabIndex.value > 0
+);
+const canSwitchNext = computed(
+  () =>
+    tabsStore.visitedTabs.length > 1 && activeTabIndex.value >= 0 &&
+    activeTabIndex.value < tabsStore.visitedTabs.length - 1
+);
 
 const handleSelect = async (index: string) => {
   if (!index.startsWith("route:")) {
@@ -93,26 +155,126 @@ const handleSelect = async (index: string) => {
   }
 };
 
+const shouldTrackRoute = (targetRoute: RouteLocationNormalizedLoaded) => {
+  if (targetRoute.path === "/login") {
+    return false;
+  }
+  if (!targetRoute.name) {
+    return false;
+  }
+  if (!authStore.hasMenuPath(targetRoute.path)) {
+    return false;
+  }
+  return targetRoute.meta.tab !== false;
+};
+
+const shouldCache = (targetRoute: RouteLocationNormalizedLoaded) =>
+  shouldTrackRoute(targetRoute) && targetRoute.meta.cache === true;
+
+const syncRouteToTabs = (targetRoute: RouteLocationNormalizedLoaded) => {
+  if (!shouldTrackRoute(targetRoute)) {
+    return;
+  }
+  tabsStore.openTab(targetRoute);
+};
+
+const resolveStartupPath = () => {
+  const activePath = tabsStore.getActivePath();
+  if (!activePath) {
+    return "";
+  }
+  const resolved = router.resolve(activePath);
+  if (!resolved.matched.length) {
+    return "/home";
+  }
+  if (!authStore.hasMenuPath(resolved.path)) {
+    return "/home";
+  }
+  return activePath;
+};
+
+const handleTabChange = async (name: string | number) => {
+  const key = String(name);
+  const tab = tabsStore.getTabByKey(key);
+  if (!tab) {
+    return;
+  }
+  tabsStore.setActiveTab(key);
+  if (route.fullPath !== tab.fullPath) {
+    await router.push(tab.fullPath);
+  }
+};
+
+const handleTabRemove = async (name: string | number) => {
+  const nextPath = tabsStore.closeTab(String(name));
+  if (nextPath && nextPath !== route.fullPath) {
+    await router.push(nextPath);
+  }
+};
+
+const switchTabByStep = async (step: -1 | 1) => {
+  if (tabsStore.visitedTabs.length < 2) {
+    return;
+  }
+  const currentIndex = activeTabIndex.value >= 0 ? activeTabIndex.value : 0;
+  const nextIndex = currentIndex + step;
+  if (nextIndex < 0 || nextIndex >= tabsStore.visitedTabs.length) {
+    return;
+  }
+  const target = tabsStore.visitedTabs[nextIndex];
+  tabsStore.setActiveTab(target.key);
+  if (target.fullPath !== route.fullPath) {
+    await router.push(target.fullPath);
+  }
+};
+
 const logout = async () => {
+  tabsStore.reset();
   authStore.clearAuth();
   await router.push("/login");
 };
+
+onMounted(async () => {
+  tabsStore.restore();
+  if (route.path === "/login") {
+    return;
+  }
+  const startupPath = resolveStartupPath();
+  if (startupPath && startupPath !== route.fullPath) {
+    await router.replace(startupPath);
+    return;
+  }
+  syncRouteToTabs(route);
+});
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (route.path === "/login") {
+      return;
+    }
+    syncRouteToTabs(route);
+  },
+  {
+    immediate: true
+  }
+);
 </script>
 
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  background: #f4f6fb;
+  background: #f2f4f7;
 }
 
 .topbar {
-  height: 52px;
+  height: 54px;
   display: flex;
-  gap: 8px;
+  gap: 2px;
   align-items: center;
-  padding: 0 18px;
-  background: #ffffff;
-  border-bottom: 1px solid #e4e7ed;
+  padding: 2px 8px;
+  background: linear-gradient(120deg, #4971d6 0%, #3f68d2 100%);
+  border-bottom: 1px solid #3158bf;
 }
 
 .topbar-left,
@@ -126,19 +288,19 @@ const logout = async () => {
 
 .topbar-left {
   flex: 1 1 auto;
-  gap: 8px;
+  gap: 4px;
   overflow: hidden;
 }
 
 .brand {
-  flex: 0 1 auto;
-  gap: 12px;
+  flex: 0 0 auto;
+  gap: 2px;
   overflow: hidden;
 }
 
 .topbar-right {
-  flex: 0 0 15%;
-  max-width: 15%;
+  flex: 0 0 12%;
+  max-width: 12%;
   justify-content: flex-end;
 }
 
@@ -150,19 +312,44 @@ const logout = async () => {
 }
 
 .brand-logo {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  background: #409eff;
+  width: 27px;
+  height: 27px;
+  border-radius: 10px;
+  border: 2px solid rgb(255 255 255 / 75%);
+  position: relative;
+}
+
+.brand-logo::before {
+  content: "";
+  position: absolute;
+  inset: 6px 5px 8px;
+  border: 2px solid rgb(255 255 255 / 75%);
+  border-top: none;
+  border-radius: 3px;
+}
+
+.brand-logo::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 5px;
+  height: 6px;
+  border: 2px solid rgb(255 255 255 / 75%);
+  border-bottom: none;
+  transform: skewY(-22deg);
+  border-radius: 2px;
 }
 
 .brand-text {
-  font-size: 16px;
-  height: 20px;
-  line-height: 20px;
+  font-size: 13px;
+  height: 13px;
+  line-height: 13px;
   font-weight: 700;
-  color: #11253d;
+  color: rgb(255 255 255 / 96%);
   white-space: nowrap;
+  margin: 0;
+  padding: 0;
 }
 
 .top-menu {
@@ -174,7 +361,7 @@ const logout = async () => {
 }
 
 :deep(.top-menu.el-menu--horizontal) {
-  --el-menu-horizontal-height: 52px;
+  --el-menu-horizontal-height: 54px;
   height: 100%;
   background-color: transparent;
   padding-left: 0;
@@ -182,13 +369,13 @@ const logout = async () => {
 
 :deep(.top-menu.el-menu--horizontal),
 :deep(.top-menu.el-menu--horizontal > .el-sub-menu .el-sub-menu__title) {
-  height: 52px;
-  line-height: 48px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1f2937;
-  padding: 0 10px;
-  border-bottom: 2px solid transparent;
+  height: 54px;
+  line-height: 54px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(255 255 255 / 90%);
+  padding: 0 12px;
+  border-bottom: 2px solid transparent !important;
 }
 
 :deep(.top-menu .el-sub-menu__icon-arrow) {
@@ -201,7 +388,8 @@ const logout = async () => {
 
 :deep(.top-menu .el-icon) {
   margin-right: 6px;
-  font-size: 16px;
+  font-size: 13px;
+  color: rgb(255 255 255 / 90%);
 }
 
 :deep(.top-menu-popper.el-popper),
@@ -243,8 +431,9 @@ const logout = async () => {
 
 :deep(.top-menu.el-menu--horizontal > .el-menu-item.is-active),
 :deep(.top-menu.el-menu--horizontal > .el-sub-menu.is-active .el-sub-menu__title) {
-  color: #409eff;
-  border-bottom-color: #409eff;
+  color: #ffffff !important;
+  border-bottom-color: #9ec0ff !important;
+  background: rgb(255 255 255 / 10%);
 }
 
 .user-info {
@@ -252,23 +441,113 @@ const logout = async () => {
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: 4px 2px;
+  border-radius: 14px;
 }
 
 .user-info:hover {
-  background: #f5f7fa;
+  background: rgb(255 255 255 / 12%);
 }
 
 .username {
-  color: #303133;
-  font-size: 14px;
-  font-weight: 500;
+  color: rgb(255 255 255 / 92%);
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .app-main {
-  padding-top: 0;
+  padding: 0;
 }
+
+.tabbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 46px;
+  padding: 0 8px;
+  background: #eceef2;
+  border-bottom: 1px solid #d4d8de;
+}
+
+.tabs-track {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app-tabs {
+  width: 100%;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header) {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.tab-switch-btn {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: #9aa3af;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+}
+
+.tab-switch-btn:not(:disabled):hover {
+  color: #66717f;
+  background: #e1e4e9;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__nav-wrap),
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__nav-wrap::after),
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__nav-wrap::before) {
+  border: none !important;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__nav) {
+  border: none;
+  gap: 2px;
+  background: transparent;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__item) {
+  height: 38px;
+  line-height: 38px;
+  border: none !important;
+  border-radius: 6px 6px 0 0;
+  background: #e6e9ee;
+  color: #737b88;
+  padding: 0 16px;
+  margin-top: 0;
+  font-weight: 400;
+  transition: all 0.18s ease;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__item:hover) {
+  color: #5f6878;
+  background: #dde2ea;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__item.is-active) {
+  color: #3f68d2;
+  background: #e9f0ff;
+  border-radius: 6px 6px 0 0;
+  box-shadow: inset 0 -1px 0 #e9f0ff;
+  font-weight: 500;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__item .is-icon-close) {
+  color: #8a94a6;
+  border-radius: 50%;
+}
+
+:deep(.app-tabs.el-tabs--card > .el-tabs__header .el-tabs__item .is-icon-close:hover) {
+  color: #344054;
+  background: #e8ecf3;
+}
+
 </style>
 
 <style>

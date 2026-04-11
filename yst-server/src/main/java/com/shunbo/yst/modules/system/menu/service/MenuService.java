@@ -17,4 +17,6 @@ public interface MenuService {
     void update(String menuId, MenuUpdateRequest request);
 
     void delete(String menuId);
+
+    void clearAllCache();
 }

@@ -5,11 +5,19 @@
         <el-button v-hasPermi="['system:menu:add']" class="toolbar-btn" type="success" @click="openCreate"
           >新增</el-button
         >
+        <el-button
+          v-hasPermi="['system:menu:edit']"
+          class="toolbar-btn"
+          type="warning"
+          plain
+          @click="clearCache"
+          >清缓存</el-button
+        >
       </div>
       <el-table :data="treeData" border row-key="menuId" :tree-props="{ children: 'children' }">
-        <el-table-column label="名称" min-width="220">
+        <el-table-column label="名称" min-width="220" class-name="tree-list-name-col">
           <template #default="{ row }">
-            <div class="menu-name-cell">
+            <div class="tree-list-name-cell">
               <el-icon v-if="resolveIconComponent(row.icon)" class="menu-icon">
                 <component :is="resolveIconComponent(row.icon)" />
               </el-icon>
@@ -17,8 +25,11 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column type="index" label="序号" width="70" />
-        <el-table-column prop="menuType" label="类型" width="90" />
+        <el-table-column label="类型" width="120">
+          <template #default="{ row }">
+            <el-tag :type="menuTypeTagType(row.menuType)">{{ menuTypeLabel(row.menuType) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="图标" width="120">
           <template #default="{ row }">
             <div class="menu-icon-cell">
@@ -68,9 +79,12 @@
         </el-form-item>
         <el-form-item label="菜单类型" required>
           <el-select v-model="form.menuType" style="width: 100%">
-            <el-option label="目录(M)" value="M" />
-            <el-option label="菜单(C)" value="C" />
-            <el-option label="按钮(F)" value="F" />
+            <el-option
+              v-for="item in menuTypeOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="路由地址">
@@ -144,9 +158,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
+import type { Component } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import * as EpIcons from "@element-plus/icons-vue";
 import {
+  clearAllMenuAuthCacheApi,
   createMenuApi,
   deleteMenuApi,
   listMenusApi,
@@ -155,7 +171,7 @@ import {
 import { useAuthStore } from "@/stores/auth";
 import type { MenuItem, MenuTreeItem } from "@/modules/system/menu/types";
 import type { DictOptionItem } from "@/modules/system/dict/types";
-import { loadDictOptions } from "@/composables/useDict";
+import { getDictLabel, getDictTagType, loadDictOptions } from "@/composables/useDict";
 
 defineOptions({
   name: "SystemMenuPage"
@@ -164,12 +180,13 @@ defineOptions({
 const authStore = useAuthStore();
 const flatData = ref<MenuItem[]>([]);
 const statusOptions = ref<DictOptionItem[]>([]);
+const menuTypeOptions = ref<DictOptionItem[]>([]);
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
 const form = reactive({
   parentId: null as string | null,
   menuName: "",
-  menuType: "C" as "M" | "C" | "F",
+  menuType: "" as "" | "M" | "C" | "F",
   path: "",
   component: "",
   icon: "",
@@ -225,7 +242,7 @@ const loadData = async () => {
 const resetForm = () => {
   form.parentId = null;
   form.menuName = "";
-  form.menuType = "C";
+  form.menuType = (menuTypeOptions.value[0]?.value as "" | "M" | "C" | "F") || "";
   form.path = "";
   form.component = "";
   form.icon = "";
@@ -261,6 +278,10 @@ const submit = async () => {
     ElMessage.warning("请填写菜单名称");
     return;
   }
+  if (!form.menuType) {
+    ElMessage.warning("请选择菜单类型");
+    return;
+  }
   const payload = { ...form, parentId: form.parentId || null };
   if (editingId.value) {
     await updateMenuApi(editingId.value, payload);
@@ -279,11 +300,17 @@ const remove = async (menuId: string) => {
   await loadData();
 };
 
+const clearCache = async () => {
+  await ElMessageBox.confirm("确认清理菜单权限缓存吗？", "提示", { type: "warning" });
+  await clearAllMenuAuthCacheApi();
+  ElMessage.success("缓存清理成功");
+};
+
 const resolveIconComponent = (iconName?: string) => {
   if (!iconName) {
     return null;
   }
-  return (EpIcons as Record<string, any>)[iconName] || null;
+  return (EpIcons as Record<string, Component>)[iconName] || null;
 };
 
 const selectIcon = (iconName: string) => {
@@ -291,22 +318,30 @@ const selectIcon = (iconName: string) => {
   iconPickerVisible.value = false;
 };
 
+const menuTypeLabel = (value: MenuItem["menuType"]) =>
+  getDictLabel(menuTypeOptions.value, value, value);
+
+const menuTypeTagType = (value: MenuItem["menuType"]) =>
+  getDictTagType(menuTypeOptions.value, value, "info");
+
 onMounted(async () => {
   if (!authStore.hasPermi("system:menu:list")) {
     return;
   }
-  statusOptions.value = await loadDictOptions("sys_common_status");
+  const [statuses, menuTypes] = await Promise.all([
+    loadDictOptions("sys_common_status"),
+    loadDictOptions("sys_menu_type")
+  ]);
+  statusOptions.value = statuses;
+  menuTypeOptions.value = menuTypes;
+  if (menuTypeOptions.value.length === 0) {
+    ElMessage.warning("字典 sys_menu_type 未配置，菜单类型不可用");
+  }
   await loadData();
 });
 </script>
 
 <style scoped>
-.menu-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .menu-icon {
   color: #606266;
 }

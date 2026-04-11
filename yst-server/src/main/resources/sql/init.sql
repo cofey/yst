@@ -229,7 +229,8 @@ ON DUPLICATE KEY UPDATE menu_id = VALUES(menu_id);
 INSERT INTO sys_dict_type (dict_id, dict_name, dict_type, status, remark, create_time, update_time)
 VALUES
   ('1f0d4bb4-3f9a-47ce-a8d7-6717ac8fe001', '用户性别', 'sys_user_sex', 1, '用户性别列表', NOW(), NOW()),
-  ('1f0d4bb4-3f9a-47ce-a8d7-6717ac8fe002', '系统状态', 'sys_common_status', 1, '系统状态列表', NOW(), NOW())
+  ('1f0d4bb4-3f9a-47ce-a8d7-6717ac8fe002', '系统状态', 'sys_common_status', 1, '系统状态列表', NOW(), NOW()),
+  ('1f0d4bb4-3f9a-47ce-a8d7-6717ac8fe003', '菜单类型', 'sys_menu_type', 1, '菜单类型列表', NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   dict_name = VALUES(dict_name),
   status = VALUES(status),
@@ -241,7 +242,10 @@ VALUES
   ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0001', 1, '男', '1', 'sys_user_sex', '', 'primary', 'N', 1, '性别男', NOW(), NOW()),
   ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0002', 2, '女', '0', 'sys_user_sex', '', 'success', 'N', 1, '性别女', NOW(), NOW()),
   ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0003', 0, '启用', '1', 'sys_common_status', '', 'success', 'Y', 1, '默认启用', NOW(), NOW()),
-  ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0004', 1, '停用', '0', 'sys_common_status', '', 'info', 'N', 1, '停用状态', NOW(), NOW())
+  ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0004', 1, '停用', '0', 'sys_common_status', '', 'info', 'N', 1, '停用状态', NOW(), NOW()),
+  ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0005', 1, '目录', 'M', 'sys_menu_type', '', 'warning', 'N', 1, '目录类型', NOW(), NOW()),
+  ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0006', 2, '菜单', 'C', 'sys_menu_type', '', 'primary', 'Y', 1, '菜单类型', NOW(), NOW()),
+  ('2a1d9f34-c68d-4d5e-a4a8-c8f6f35a0007', 3, '按钮', 'F', 'sys_menu_type', '', 'success', 'N', 1, '按钮类型', NOW(), NOW())
 ON DUPLICATE KEY UPDATE
   dict_sort = VALUES(dict_sort),
   dict_label = VALUES(dict_label),

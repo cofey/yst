@@ -43,6 +43,23 @@
         <div class="dict-tools-actions">
           <el-button class="toolbar-btn" type="default" @click="goBack">返回类型</el-button>
           <el-button
+            v-hasPermi="['system:dict:edit']"
+            class="toolbar-btn"
+            type="warning"
+            plain
+            :disabled="!currentDictType"
+            @click="clearCurrentTypeCache"
+            >清当前类型缓存</el-button
+          >
+          <el-button
+            v-hasPermi="['system:dict:edit']"
+            class="toolbar-btn"
+            type="warning"
+            plain
+            @click="clearAllCache"
+            >清空缓存</el-button
+          >
+          <el-button
             v-hasPermi="['system:dict:add']"
             class="toolbar-btn"
             type="success"
@@ -153,6 +170,8 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRoute, useRouter } from "vue-router";
 import {
+  clearAllDictCacheApi,
+  clearDictTypeCacheApi,
   createDictDataApi,
   deleteDictDataApi,
   listDictDataApi,
@@ -319,6 +338,23 @@ const removeData = async (dictCode: string) => {
 
 const goBack = () => {
   router.push("/system/dicts");
+};
+
+const clearCurrentTypeCache = async () => {
+  if (!currentDictType.value) {
+    ElMessage.warning("当前字典类型为空");
+    return;
+  }
+  await clearDictTypeCacheApi(currentDictType.value);
+  clearDictCache(currentDictType.value);
+  ElMessage.success(`已清理字典缓存：${currentDictType.value}`);
+};
+
+const clearAllCache = async () => {
+  await ElMessageBox.confirm("确认清空全部字典缓存吗？", "提示", { type: "warning" });
+  await clearAllDictCacheApi();
+  clearDictCache();
+  ElMessage.success("已清理全部字典缓存");
 };
 
 const statusLabel = (value: number) => getDictLabel(statusOptions.value, String(value), "-");

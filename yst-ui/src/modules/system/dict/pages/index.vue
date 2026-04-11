@@ -45,6 +45,14 @@
         <el-button v-hasPermi="['system:dict:add']" class="toolbar-btn" type="success" @click="openTypeCreate"
           >新增</el-button
         >
+        <el-button
+          v-hasPermi="['system:dict:edit']"
+          class="toolbar-btn"
+          type="warning"
+          plain
+          @click="clearAllCache"
+          >清空缓存</el-button
+        >
       </div>
 
       <el-table :data="dictTypeTable" border empty-text="暂无数据">
@@ -59,7 +67,7 @@
         <el-table-column label="创建时间" min-width="180">
           <template #default="{ row }">{{ formatDateTime(row.createTime, "minute") }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="190" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button
               v-hasPermi="['system:dict:edit']"
@@ -67,6 +75,13 @@
               type="primary"
               @click.stop="openTypeEdit(row)"
               >编辑</el-button
+            >
+            <el-button
+              v-hasPermi="['system:dict:edit']"
+              link
+              type="warning"
+              @click.stop="clearTypeCache(row.dictType)"
+              >清缓存</el-button
             >
             <el-button
               v-hasPermi="['system:dict:list']"
@@ -135,6 +150,8 @@ import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRouter } from "vue-router";
 import {
+  clearAllDictCacheApi,
+  clearDictTypeCacheApi,
   createDictTypeApi,
   deleteDictTypeApi,
   listDictTypesApi,
@@ -272,6 +289,19 @@ const removeType = async (dictId: string) => {
   if (queried.value) {
     await loadTypes();
   }
+};
+
+const clearTypeCache = async (dictType: string) => {
+  await clearDictTypeCacheApi(dictType);
+  clearDictCache(dictType);
+  ElMessage.success(`已清理字典缓存：${dictType}`);
+};
+
+const clearAllCache = async () => {
+  await ElMessageBox.confirm("确认清空全部字典缓存吗？", "提示", { type: "warning" });
+  await clearAllDictCacheApi();
+  clearDictCache();
+  ElMessage.success("已清理全部字典缓存");
 };
 
 const goDataPage = (row: DictTypeItem) => {
