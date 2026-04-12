@@ -42,11 +42,13 @@ export function deleteDictTypeApi(dictId: string) {
   return httpRequest.delete<void>(`/dict/types/${dictId}`);
 }
 
-export function listDictDataApi(params?: {
-  dictType?: string;
-  dictLabel?: string;
-  status?: number;
-} & PageQueryParams) {
+export function listDictDataApi(
+  params?: {
+    dictType?: string;
+    dictLabel?: string;
+    status?: number;
+  } & PageQueryParams
+) {
   return httpRequest.get<PageResult<DictDataItem>>("/dict/data", {
     pageNum: 1,
     pageSize: 10,

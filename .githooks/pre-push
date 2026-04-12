@@ -3,11 +3,63 @@ set -e
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+BUG_REPORT_DIR="${REPO_ROOT}/docs/bugs"
+BUG_REPORT_FILE="${BUG_REPORT_DIR}/$(date +%F).log"
+
+mkdir -p "${BUG_REPORT_DIR}"
+: > "${BUG_REPORT_FILE}"
+
+strip_ansi() {
+  sed "s/$(printf '\033')\\[[0-9;?]*[ -/]*[@-~]//g"
+}
 
 echo "[Gate] 后端检查..."
-( cd "${REPO_ROOT}/yst-server" && mvn clean verify )
+BACKEND_LOG="$(mktemp)"
+if (
+  cd "${REPO_ROOT}" && \
+  tools/maven-3.6.3/bin/mvn -f yst-server/pom.xml -DskipTests verify
+) >"${BACKEND_LOG}" 2>&1; then
+  cat "${BACKEND_LOG}"
+  {
+    echo "## 后端检查"
+    strip_ansi < "${BACKEND_LOG}"
+    echo
+  } >> "${BUG_REPORT_FILE}"
+else
+  cat "${BACKEND_LOG}"
+  {
+    echo "## 后端检查(失败)"
+    strip_ansi < "${BACKEND_LOG}"
+    echo
+  } >> "${BUG_REPORT_FILE}"
+  rm -f "${BACKEND_LOG}"
+  echo "[Gate] 检查失败，报告已保留: ${BUG_REPORT_FILE}"
+  exit 1
+fi
+rm -f "${BACKEND_LOG}"
 
 echo "[Gate] 前端检查..."
-( cd "${REPO_ROOT}/yst-ui" && npm run check )
+FRONTEND_LOG="$(mktemp)"
+if ( cd "${REPO_ROOT}/yst-ui" && pnpm run check ) >"${FRONTEND_LOG}" 2>&1; then
+  cat "${FRONTEND_LOG}"
+  {
+    echo "## 前端检查"
+    strip_ansi < "${FRONTEND_LOG}"
+    echo
+  } >> "${BUG_REPORT_FILE}"
+else
+  cat "${FRONTEND_LOG}"
+  {
+    echo "## 前端检查(失败)"
+    strip_ansi < "${FRONTEND_LOG}"
+    echo
+  } >> "${BUG_REPORT_FILE}"
+  rm -f "${FRONTEND_LOG}"
+  echo "[Gate] 检查失败，报告已保留: ${BUG_REPORT_FILE}"
+  exit 1
+fi
+rm -f "${FRONTEND_LOG}"
+
+rm -f "${BUG_REPORT_FILE}"
 
 echo "[Gate] 全部通过，允许 push"

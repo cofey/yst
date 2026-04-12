@@ -2,7 +2,11 @@
   <div class="page">
     <el-card>
       <div class="table-tools">
-        <el-button v-hasPermi="['system:menu:add']" class="toolbar-btn" type="success" @click="openCreate"
+        <el-button
+          v-hasPermi="['system:menu:add']"
+          class="toolbar-btn"
+          type="success"
+          @click="openCreate"
           >新增</el-button
         >
         <el-button
@@ -27,7 +31,7 @@
         </el-table-column>
         <el-table-column label="类型" width="120">
           <template #default="{ row }">
-            <el-tag :type="menuTypeTagType(row.menuType)">{{ menuTypeLabel(row.menuType) }}</el-tag>
+            <dict-tag :options="menuTypeOptions" :value="row.menuType" />
           </template>
         </el-table-column>
         <el-table-column label="图标" width="120">
@@ -157,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, getCurrentInstance, onMounted, reactive, ref } from "vue";
 import type { Component } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import * as EpIcons from "@element-plus/icons-vue";
@@ -170,17 +174,18 @@ import {
 } from "@/modules/system/menu/api";
 import { useAuthStore } from "@/stores/auth";
 import type { MenuItem, MenuTreeItem } from "@/modules/system/menu/types";
-import type { DictOptionItem } from "@/modules/system/dict/types";
-import { getDictLabel, getDictTagType, loadDictOptions } from "@/composables/useDict";
 
 defineOptions({
   name: "SystemMenuPage"
 });
 
 const authStore = useAuthStore();
+const { proxy } = getCurrentInstance()!;
+const { sys_common_status: statusOptions, sys_menu_type: menuTypeOptions } = proxy.useDict(
+  "sys_common_status",
+  "sys_menu_type"
+);
 const flatData = ref<MenuItem[]>([]);
-const statusOptions = ref<DictOptionItem[]>([]);
-const menuTypeOptions = ref<DictOptionItem[]>([]);
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
 const form = reactive({
@@ -318,24 +323,9 @@ const selectIcon = (iconName: string) => {
   iconPickerVisible.value = false;
 };
 
-const menuTypeLabel = (value: MenuItem["menuType"]) =>
-  getDictLabel(menuTypeOptions.value, value, value);
-
-const menuTypeTagType = (value: MenuItem["menuType"]) =>
-  getDictTagType(menuTypeOptions.value, value, "info");
-
 onMounted(async () => {
   if (!authStore.hasPermi("system:menu:list")) {
     return;
-  }
-  const [statuses, menuTypes] = await Promise.all([
-    loadDictOptions("sys_common_status"),
-    loadDictOptions("sys_menu_type")
-  ]);
-  statusOptions.value = statuses;
-  menuTypeOptions.value = menuTypes;
-  if (menuTypeOptions.value.length === 0) {
-    ElMessage.warning("字典 sys_menu_type 未配置，菜单类型不可用");
   }
   await loadData();
 });

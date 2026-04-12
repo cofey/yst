@@ -2,7 +2,7 @@ import axios from "axios";
 import { ElMessage } from "element-plus";
 import router from "@/router";
 import { useAuthStore } from "@/stores/auth";
-import type { AxiosRequestConfig } from "axios";
+import type { AxiosRequestConfig, AxiosResponse } from "axios";
 import type { ApiResponse } from "@/shared/types/api";
 
 const http = axios.create({
@@ -53,6 +53,32 @@ async function request<T>(config: AxiosRequestConfig): Promise<T> {
   return body.data;
 }
 
+function parseFilenameFromHeaders(response: AxiosResponse<Blob>, fallback: string) {
+  const contentDisposition = response.headers["content-disposition"];
+  if (!contentDisposition) {
+    return fallback;
+  }
+  const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1]);
+    } catch {
+      return utfMatch[1];
+    }
+  }
+  const normalMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
+  return normalMatch?.[1] || fallback;
+}
+
+function triggerDownload(blob: Blob, filename: string) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+}
+
 export const httpRequest = {
   get<T>(url: string, params?: Record<string, unknown>) {
     return request<T>({ method: "GET", url, params });
@@ -65,6 +91,17 @@ export const httpRequest = {
   },
   delete<T>(url: string) {
     return request<T>({ method: "DELETE", url });
+  },
+  async download(url: string, filename = "download.xlsx", params?: Record<string, unknown>) {
+    const response = await http.request<Blob>({
+      method: "GET",
+      url,
+      params,
+      responseType: "blob"
+    });
+    const downloadFilename = parseFilenameFromHeaders(response, filename);
+    const blob = response.data instanceof Blob ? response.data : new Blob([response.data]);
+    triggerDownload(blob, downloadFilename);
   }
 };
 

@@ -72,15 +72,23 @@
               >查询</el-button
             >
             <el-button class="toolbar-btn" @click="handleReset">重置</el-button>
-            <el-button class="toolbar-btn toolbar-btn-toggle" link type="primary" @click="showMore = !showMore">{{
-              showMore ? "收起" : "展开"
-            }}</el-button>
+            <el-button
+              class="toolbar-btn toolbar-btn-toggle"
+              link
+              type="primary"
+              @click="showMore = !showMore"
+              >{{ showMore ? "收起" : "展开" }}</el-button
+            >
           </div>
         </div>
       </div>
 
       <div class="table-tools">
-        <el-button v-hasPermi="['system:user:add']" class="toolbar-btn" type="success" @click="openCreate"
+        <el-button
+          v-hasPermi="['system:user:add']"
+          class="toolbar-btn"
+          type="success"
+          @click="openCreate"
           >新增</el-button
         >
         <el-upload
@@ -126,7 +134,7 @@
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <dict-tag :options="statusOptions" :value="row.status" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" min-width="180">
@@ -220,8 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import axios from "axios";
-import { onMounted, reactive, ref } from "vue";
+import { getCurrentInstance, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type { UploadRawFile } from "element-plus";
 import { listCompaniesApi } from "@/modules/system/company/api";
@@ -231,12 +238,12 @@ import type { RoleItem } from "@/modules/system/role/types";
 import {
   createUserApi,
   deleteUserApi,
+  exportUsersApi,
+  importUsersApi,
   listUsersApi,
   updateUserApi
 } from "@/modules/system/user/api";
 import type { UserItem } from "@/modules/system/user/types";
-import type { DictOptionItem } from "@/modules/system/dict/types";
-import { getDictLabel, getDictTagType, loadDictOptions } from "@/composables/useDict";
 import { useAuthStore } from "@/stores/auth";
 import { formatDateTime } from "@/shared/utils/datetime";
 
@@ -245,6 +252,8 @@ defineOptions({
 });
 
 const authStore = useAuthStore();
+const { proxy } = getCurrentInstance()!;
+const { sys_common_status: statusOptions } = proxy.useDict("sys_common_status");
 
 const query = reactive({
   username: "",
@@ -266,7 +275,6 @@ const page = reactive({
 const tableData = ref<UserItem[]>([]);
 const companyOptions = ref<CompanyItem[]>([]);
 const roleOptions = ref<RoleItem[]>([]);
-const statusOptions = ref<DictOptionItem[]>([]);
 
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
@@ -407,14 +415,7 @@ const remove = async (userId: string) => {
 };
 
 const importExcel = async (file: UploadRawFile) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  await axios.post("/api/users/import", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-      Authorization: `Bearer ${authStore.token}`
-    }
-  });
+  await importUsersApi(file);
   ElMessage.success("导入成功");
   if (queried.value) {
     await loadUsers();
@@ -423,39 +424,17 @@ const importExcel = async (file: UploadRawFile) => {
 };
 
 const exportExcel = async () => {
-  const res = await axios.get("/api/users/export", {
-    responseType: "blob",
-    headers: {
-      Authorization: `Bearer ${authStore.token}`
-    }
-  });
-  const blob = new Blob([res.data], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-  });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "用户列表.xlsx";
-  a.click();
-  window.URL.revokeObjectURL(url);
+  await exportUsersApi("用户列表.xlsx");
 };
 
 const loadOptions = async () => {
-  const [companiesRes, rolesRes, statuses] = await Promise.all([
+  const [companiesRes, rolesRes] = await Promise.all([
     listCompaniesApi({ pageNum: 1, pageSize: 1000 }),
-    listRolesApi({ pageNum: 1, pageSize: 1000 }),
-    loadDictOptions("sys_common_status")
+    listRolesApi({ pageNum: 1, pageSize: 1000 })
   ]);
   companyOptions.value = companiesRes.records;
   roleOptions.value = rolesRes.records;
-  if (statuses.length) {
-    statusOptions.value = statuses;
-  }
 };
-
-const statusLabel = (value: number) => getDictLabel(statusOptions.value, String(value), "-");
-
-const statusTagType = (value: number) => getDictTagType(statusOptions.value, String(value));
 
 onMounted(() => {
   if (authStore.hasPermi("system:user:list")) {

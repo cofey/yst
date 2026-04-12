@@ -1,18 +1,10 @@
 <template>
-  <el-sub-menu
-    v-if="hasChildren"
-    :index="menuIndex"
-    popper-class="top-menu-popper"
-  >
+  <el-sub-menu v-if="hasChildren" :index="menuIndex" popper-class="top-menu-popper">
     <template #title>
       <el-icon><component :is="menuIcon" /></el-icon>
       <span>{{ node.menuName }}</span>
     </template>
-    <TopNavMenuNode
-      v-for="child in node.children"
-      :key="child.menuId"
-      :node="child"
-    />
+    <TopNavMenuNode v-for="child in node.children" :key="child.menuId" :node="child" />
   </el-sub-menu>
   <el-menu-item v-else :index="menuIndex">
     <el-icon><component :is="menuIcon" /></el-icon>

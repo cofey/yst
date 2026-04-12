@@ -28,3 +28,13 @@ export function updateUserApi(userId: string, data: UserUpdateReq) {
 export function deleteUserApi(userId: string) {
   return httpRequest.delete<void>(`/users/${userId}`);
 }
+
+export function importUsersApi(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return httpRequest.post<void>("/users/import", formData);
+}
+
+export function exportUsersApi(filename = "用户列表.xlsx") {
+  return httpRequest.download("/users/export", filename);
+}

@@ -5,7 +5,6 @@ SmartST2020/
 
 # Build
 target/
-tools/sonarqube
 
 # IDE
 .idea/

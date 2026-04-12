@@ -3,6 +3,8 @@ package com.shunbo.yst.common.query;
 import lombok.Data;
 import org.springframework.util.StringUtils;
 
+import java.util.Locale;
+
 @Data
 public class PageQuery {
 
@@ -42,7 +44,7 @@ public class PageQuery {
         if (!StringUtils.hasText(order)) {
             return false;
         }
-        String normalized = order.trim().toLowerCase();
+        String normalized = order.trim().toLowerCase(Locale.ROOT);
         return "asc".equals(normalized) || "ascending".equals(normalized) || "ascend".equals(normalized);
     }
 }

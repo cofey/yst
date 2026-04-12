@@ -6,6 +6,8 @@ import "element-plus/dist/index.css";
 import App from "./App.vue";
 import router from "./router";
 import { setupHasPermiDirective } from "./directives/hasPermi";
+import DictTag from "@/modules/system/dict/components/DictTag.vue";
+import { setupDict } from "@/modules/system/dict/dict";
 import "./styles/global.css";
 
 const app = createApp(App);
@@ -15,4 +17,6 @@ app.use(ElementPlus, {
   locale: zhCn
 });
 setupHasPermiDirective(app);
+setupDict(app);
+app.component("DictTag", DictTag);
 app.mount("#app");

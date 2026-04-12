@@ -7,10 +7,10 @@
   },
   "type": "module",
   "scripts": {
-    "start:dev": "bash -lc 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite --mode development'",
-    "start:prod": "bash -lc 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite --mode production'",
-    "build:dev": "bash -lc 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite build --mode development'",
-    "build:prod": "bash -lc 'export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite build --mode production'",
+    "start:dev": "bash -lc 'unset npm_config_prefix NPM_CONFIG_PREFIX; export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite --mode development'",
+    "start:prod": "bash -lc 'unset npm_config_prefix NPM_CONFIG_PREFIX; export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite --mode production'",
+    "build:dev": "bash -lc 'unset npm_config_prefix NPM_CONFIG_PREFIX; export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite build --mode development'",
+    "build:prod": "bash -lc 'unset npm_config_prefix NPM_CONFIG_PREFIX; export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use v20.15.0 && vite build --mode production'",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
@@ -21,6 +21,22 @@
     "check": "pnpm run lint && pnpm run format",
     "audit": "pnpm audit --registry=https://registry.npmjs.org",
     "audit:fix": "pnpm audit --fix --registry=https://registry.npmjs.org"
+  },
+  "scriptDescriptions": {
+    "start:dev": "使用 Node v20.15.0 启动 Vite 开发服务（development 模式），用于本地开发调试。",
+    "start:prod": "使用 Node v20.15.0 启动 Vite 开发服务（production 模式），用于本地模拟生产配置运行。",
+    "build:dev": "使用 Node v20.15.0 执行 development 模式构建，用于生成开发环境构建产物。",
+    "build:prod": "使用 Node v20.15.0 执行 production 模式构建，用于生成生产可发布产物。",
+    "preview": "本地预览打包后的产物，用于验证生产构建在预览服务器中的运行效果。",
+    "type-check": "执行 TypeScript 静态类型检查，不生成输出文件，用于提前发现类型错误。",
+    "test": "运行 Vitest 测试用例（一次性运行模式），用于回归验证功能正确性。",
+    "lint": "执行 ESLint 检查 .ts/.tsx/.vue 文件并禁止 warning，用于统一代码规范与质量门禁。",
+    "lint:fix": "执行 ESLint 并自动修复可修复问题，用于快速整理风格与简单规范错误。",
+    "format": "使用 Prettier 校验格式是否符合规范，不改文件，用于 CI 或提交前检查。",
+    "format:write": "使用 Prettier 自动格式化文件并写回，用于批量统一代码格式。",
+    "check": "串行执行 lint 与 format 校验，作为提交前的一键质量检查入口。",
+    "audit": "基于 npm 官方源执行依赖安全审计，用于发现已知漏洞风险。",
+    "audit:fix": "执行依赖安全审计并尝试自动修复，用于快速处理可自动修复的漏洞项。"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -34,8 +50,8 @@
   },
   "devDependencies": {
     "@types/node": "20.15.0",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.50.0",
+    "@typescript-eslint/parser": "^8.50.0",
     "@vitejs/plugin-vue": "^5.2.0",
     "@vue/test-utils": "^2.4.6",
     "eslint": "^8.57.1",

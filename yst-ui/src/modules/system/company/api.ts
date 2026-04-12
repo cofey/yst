@@ -30,3 +30,13 @@ export function updateCompanyApi(
 export function deleteCompanyApi(companyId: string) {
   return httpRequest.delete<void>(`/companies/${companyId}`);
 }
+
+export function importCompaniesApi(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return httpRequest.post<void>("/companies/import", formData);
+}
+
+export function exportCompaniesApi(filename = "单位列表.xlsx") {
+  return httpRequest.download("/companies/export", filename);
+}

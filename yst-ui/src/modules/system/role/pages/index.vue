@@ -33,7 +33,11 @@
             </el-select>
           </div>
           <div class="toolbar-actions right-actions">
-            <el-button v-hasPermi="['system:role:list']" class="toolbar-btn" type="primary" @click="handleQuery"
+            <el-button
+              v-hasPermi="['system:role:list']"
+              class="toolbar-btn"
+              type="primary"
+              @click="handleQuery"
               >查询</el-button
             >
             <el-button class="toolbar-btn" @click="handleReset">重置</el-button>
@@ -42,7 +46,11 @@
       </div>
 
       <div class="table-tools">
-        <el-button v-hasPermi="['system:role:add']" class="toolbar-btn" type="success" @click="openCreate"
+        <el-button
+          v-hasPermi="['system:role:add']"
+          class="toolbar-btn"
+          type="success"
+          @click="openCreate"
           >新增</el-button
         >
       </div>
@@ -53,7 +61,7 @@
         <el-table-column prop="roleKey" label="角色标识" min-width="140" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <dict-tag :options="statusOptions" :value="row.status" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" min-width="180">
@@ -136,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref } from "vue";
+import { computed, getCurrentInstance, nextTick, onMounted, reactive, ref } from "vue";
 import type { ElTree } from "element-plus";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -151,8 +159,6 @@ import { listMenusApi } from "@/modules/system/menu/api";
 import { useAuthStore } from "@/stores/auth";
 import type { MenuItem, MenuTreeItem } from "@/modules/system/menu/types";
 import type { RoleItem } from "@/modules/system/role/types";
-import type { DictOptionItem } from "@/modules/system/dict/types";
-import { getDictLabel, getDictTagType, loadDictOptions } from "@/composables/useDict";
 import { formatDateTime } from "@/shared/utils/datetime";
 
 defineOptions({
@@ -160,6 +166,8 @@ defineOptions({
 });
 
 const authStore = useAuthStore();
+const { proxy } = getCurrentInstance()!;
+const { sys_common_status: statusOptions } = proxy.useDict("sys_common_status");
 
 const query = reactive({
   roleName: "",
@@ -176,7 +184,6 @@ const page = reactive({
 
 const tableData = ref<RoleItem[]>([]);
 const menuFlat = ref<MenuItem[]>([]);
-const statusOptions = ref<DictOptionItem[]>([]);
 
 const dialogVisible = ref(false);
 const assignVisible = ref(false);
@@ -327,22 +334,11 @@ const submitAssign = async () => {
   assignVisible.value = false;
 };
 
-const statusLabel = (value: number) => getDictLabel(statusOptions.value, String(value), "-");
-
-const statusTagType = (value: number) => getDictTagType(statusOptions.value, String(value));
-
 onMounted(async () => {
   if (!authStore.hasPermi("system:role:list")) {
     return;
   }
-  const [menus, statuses] = await Promise.all([
-    listMenusApi(),
-    loadDictOptions("sys_common_status")
-  ]);
-  menuFlat.value = menus;
-  if (statuses.length) {
-    statusOptions.value = statuses;
-  }
+  menuFlat.value = await listMenusApi();
   await handleQuery();
 });
 </script>

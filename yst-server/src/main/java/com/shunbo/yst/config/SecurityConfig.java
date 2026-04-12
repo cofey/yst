@@ -3,7 +3,7 @@ package com.shunbo.yst.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shunbo.yst.common.ApiResponse;
 import com.shunbo.yst.security.JwtAuthenticationFilter;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -25,7 +25,6 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ObjectMapper objectMapper;
 
-    @SuppressFBWarnings(value = "EI_EXPOSE_REP2", justification = "Spring manages bean lifecycle for injected dependencies")
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, ObjectMapper objectMapper) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.objectMapper = objectMapper;

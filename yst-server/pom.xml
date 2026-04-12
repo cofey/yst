@@ -167,6 +167,7 @@
                     <threshold>Low</threshold>
                     <failOnError>true</failOnError>
                     <includeTests>false</includeTests>
+                    <excludeFilterFile>checkstyle/spotbugs-exclude.xml</excludeFilterFile>
                 </configuration>
                 <executions>
                     <execution>
