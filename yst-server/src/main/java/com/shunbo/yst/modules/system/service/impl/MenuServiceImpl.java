@@ -173,7 +173,10 @@ public class MenuServiceImpl implements MenuService {
         for (MenuTreeVO node : nodeMap.values()) {
             String parentId = node.getParentId();
             if (StringUtils.hasText(parentId) && nodeMap.containsKey(parentId)) {
-                nodeMap.get(parentId).getChildren().add(node);
+                MenuTreeVO parentNode = nodeMap.get(parentId);
+                List<MenuTreeVO> parentChildren = parentNode.getChildren();
+                parentChildren.add(node);
+                parentNode.setChildren(parentChildren);
             } else {
                 roots.add(node);
             }

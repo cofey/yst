@@ -431,6 +431,12 @@ watch(
   background: rgb(255 255 255 / 10%);
 }
 
+:deep(.top-menu.el-menu--horizontal > .el-menu-item:hover),
+:deep(.top-menu.el-menu--horizontal > .el-sub-menu .el-sub-menu__title:hover) {
+  color: #ffffff !important;
+  background: rgb(255 255 255 / 10%) !important;
+}
+
 .user-info {
   display: flex;
   align-items: center;
