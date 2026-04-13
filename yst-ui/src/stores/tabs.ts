@@ -1,251 +1,196 @@
-import type { RouteLocationNormalizedLoaded } from "vue-router";
 import { defineStore } from "pinia";
+import type { RouteLocationNormalizedLoaded } from "vue-router";
 
-const TABS_STORAGE_KEY = "tabs_state";
-const MAX_TABS = 20;
+const TABS_STORAGE_KEY = "yst_tabs_state";
 
-export interface TabItem {
+export interface AppTabItem {
   key: string;
   title: string;
   fullPath: string;
-  name: string;
+  path: string;
   closable: boolean;
-  cacheable: boolean;
-  affix: boolean;
+  cache: boolean;
+  keepAliveName: string;
 }
 
 interface TabsState {
-  visitedTabs: TabItem[];
   activeTabKey: string;
-  cachedViewKeys: string[];
+  visitedTabs: AppTabItem[];
 }
 
-interface PersistedTabsState {
-  visitedTabs: TabItem[];
-  activeTabKey: string;
-  cachedViewKeys: string[];
-}
-
-function stringifyValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.map((item) => stringifyValue(item)).join(",");
-  }
-  if (value === undefined || value === null) {
-    return "";
-  }
-  return String(value);
-}
-
-function buildParamSignature(params: RouteLocationNormalizedLoaded["params"]): string {
-  const entries = Object.entries(params || {})
-    .map(([key, value]) => [key, stringifyValue(value)] as const)
-    .filter(([, value]) => value !== "")
-    .sort(([a], [b]) => a.localeCompare(b));
-
-  if (!entries.length) {
-    return "";
-  }
-  return entries.map(([key, value]) => `${key}=${value}`).join("&");
-}
-
-export function buildTabKey(route: Pick<RouteLocationNormalizedLoaded, "name" | "path" | "params">) {
-  const base = route.name ? String(route.name) : route.path;
-  const signature = buildParamSignature(route.params || {});
-  return signature ? `${base}::${signature}` : base;
-}
-
-function isTabRoute(route: Pick<RouteLocationNormalizedLoaded, "path" | "name" | "meta">) {
-  if (route.path === "/login") {
-    return false;
-  }
-  if (route.meta?.tab === false) {
-    return false;
-  }
-  return Boolean(route.name);
-}
-
-function resolveTabTitle(route: Pick<RouteLocationNormalizedLoaded, "meta" | "name" | "params" | "query">) {
-  const fixedTitle = route.meta?.title ? String(route.meta.title) : "";
-  if (route.name === "dict-data") {
-    const dictName = route.query?.dictName ? String(route.query.dictName) : "";
-    const dictType = route.params?.dictType ? String(route.params.dictType) : "";
-    if (dictName) {
-      return `${dictName}数据`;
-    }
-    if (dictType) {
-      return `字典数据(${dictType})`;
-    }
-  }
-  if (fixedTitle) {
-    return fixedTitle;
-  }
-  return route.name ? String(route.name) : "未命名页面";
-}
-
-function toTabItem(route: RouteLocationNormalizedLoaded): TabItem {
-  const affix = Boolean(route.meta?.affix);
-  const cacheable = Boolean(route.meta?.cache);
-  return {
-    key: buildTabKey(route),
-    title: resolveTabTitle(route),
-    fullPath: route.fullPath,
-    name: route.meta?.keepAliveName
-      ? String(route.meta.keepAliveName)
-      : route.name
-        ? String(route.name)
-        : route.path,
-    closable: !affix,
-    cacheable,
-    affix
-  };
-}
-
-function readState(): TabsState {
+function readTabsState(): TabsState {
   const raw = localStorage.getItem(TABS_STORAGE_KEY);
   if (!raw) {
     return {
-      visitedTabs: [],
       activeTabKey: "",
-      cachedViewKeys: []
+      visitedTabs: []
     };
   }
-
   try {
-    const parsed = JSON.parse(raw) as PersistedTabsState;
-    const visitedTabs = Array.isArray(parsed?.visitedTabs) ? parsed.visitedTabs : [];
-    const activeTabKey = typeof parsed?.activeTabKey === "string" ? parsed.activeTabKey : "";
-    const cachedViewKeys = Array.isArray(parsed?.cachedViewKeys)
-      ? parsed.cachedViewKeys.filter((key) => typeof key === "string")
+    const parsed = JSON.parse(raw);
+    const visitedTabs = Array.isArray(parsed?.visitedTabs)
+      ? parsed.visitedTabs
+        .map((item: Partial<AppTabItem>) => ({
+          key: String(item?.key || ""),
+          title: String(item?.title || ""),
+          fullPath: String(item?.fullPath || ""),
+          path: String(item?.path || ""),
+          closable: item?.closable !== false,
+          cache: item?.cache === true,
+          keepAliveName: String(item?.keepAliveName || "")
+        }))
+        .filter((item: AppTabItem) => item.key && item.fullPath)
       : [];
+    const activeTabKey = String(parsed?.activeTabKey || "");
     return {
-      visitedTabs,
       activeTabKey,
-      cachedViewKeys
+      visitedTabs
     };
   } catch {
     return {
-      visitedTabs: [],
       activeTabKey: "",
-      cachedViewKeys: []
+      visitedTabs: []
     };
   }
 }
 
-function persistState(state: TabsState) {
-  const payload: PersistedTabsState = {
-    visitedTabs: state.visitedTabs,
-    activeTabKey: state.activeTabKey,
-    cachedViewKeys: state.cachedViewKeys
-  };
-  localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(payload));
+function persistTabsState(state: TabsState) {
+  localStorage.setItem(
+    TABS_STORAGE_KEY,
+    JSON.stringify({
+      activeTabKey: state.activeTabKey,
+      visitedTabs: state.visitedTabs
+    })
+  );
 }
 
-function clampTabs(tabs: TabItem[]) {
-  if (tabs.length <= MAX_TABS) {
-    return tabs;
+function resolveTitle(route: RouteLocationNormalizedLoaded): string {
+  if (typeof route.meta.title === "string" && route.meta.title.trim()) {
+    return route.meta.title.trim();
   }
-  const affixTabs = tabs.filter((tab) => tab.affix);
-  const dynamicTabs = tabs.filter((tab) => !tab.affix);
-  const keepDynamicCount = Math.max(0, MAX_TABS - affixTabs.length);
-  const keptDynamicTabs = dynamicTabs.slice(-keepDynamicCount);
-  return [...affixTabs, ...keptDynamicTabs];
+  if (typeof route.name === "string" && route.name.trim()) {
+    return route.name.trim();
+  }
+  return route.path || "未命名页面";
 }
 
-export function getTabsStorageKey() {
-  return TABS_STORAGE_KEY;
+function resolveKeepAliveName(route: RouteLocationNormalizedLoaded): string {
+  if (typeof route.meta.keepAliveName === "string" && route.meta.keepAliveName.trim()) {
+    return route.meta.keepAliveName.trim();
+  }
+  if (typeof route.name === "string" && route.name.trim()) {
+    return route.name.trim();
+  }
+  return "";
+}
+
+function buildTabFromRoute(route: RouteLocationNormalizedLoaded): AppTabItem {
+  return {
+    key: buildTabKey(route),
+    title: resolveTitle(route),
+    fullPath: route.fullPath,
+    path: route.path,
+    closable: route.meta.affix !== true,
+    cache: route.meta.cache === true,
+    keepAliveName: resolveKeepAliveName(route)
+  };
+}
+
+export function buildTabKey(route: RouteLocationNormalizedLoaded): string {
+  return route.fullPath;
 }
 
 export const useTabsStore = defineStore("tabs", {
-  state: (): TabsState => readState(),
+  state: (): TabsState => ({
+    activeTabKey: "",
+    visitedTabs: []
+  }),
+  getters: {
+    cachedViewKeys(state: TabsState): string[] {
+      return state.visitedTabs
+        .filter((item: AppTabItem) => item.cache && item.keepAliveName)
+        .map((item: AppTabItem) => item.keepAliveName);
+    }
+  },
   actions: {
     openTab(route: RouteLocationNormalizedLoaded) {
-      if (!isTabRoute(route)) {
-        return;
-      }
-      const current = toTabItem(route);
-      const index = this.visitedTabs.findIndex((tab) => tab.key === current.key);
-      if (index >= 0) {
-        this.visitedTabs[index] = current;
+      const nextTab = buildTabFromRoute(route);
+      const existingIndex = this.visitedTabs.findIndex((item) => item.key === nextTab.key);
+      if (existingIndex >= 0) {
+        this.visitedTabs[existingIndex] = {
+          ...this.visitedTabs[existingIndex],
+          ...nextTab
+        };
       } else {
-        this.visitedTabs.push(current);
-        this.visitedTabs = clampTabs(this.visitedTabs);
+        this.visitedTabs.push(nextTab);
       }
-
-      if (!this.visitedTabs.some((tab) => tab.key === current.key)) {
-        const fallback = this.visitedTabs[this.visitedTabs.length - 1];
-        this.activeTabKey = fallback?.key || "";
-      } else {
-        this.activeTabKey = current.key;
-      }
-
-      this.syncCachedViews();
-      persistState(this.$state);
+      this.activeTabKey = nextTab.key;
+      persistTabsState(this.$state);
     },
     setActiveTab(key: string) {
-      if (!this.visitedTabs.some((tab) => tab.key === key)) {
+      if (!key) {
+        return;
+      }
+      if (!this.visitedTabs.some((item) => item.key === key)) {
         return;
       }
       this.activeTabKey = key;
-      persistState(this.$state);
+      persistTabsState(this.$state);
     },
-    closeTab(key: string) {
-      const index = this.visitedTabs.findIndex((tab) => tab.key === key);
+    closeTab(key: string): string {
+      const index = this.visitedTabs.findIndex((item) => item.key === key);
       if (index < 0) {
         return this.getActivePath();
       }
-      if (!this.visitedTabs[index].closable) {
+
+      const target = this.visitedTabs[index];
+      if (!target.closable) {
         return this.getActivePath();
       }
 
       const isActive = this.activeTabKey === key;
       this.visitedTabs.splice(index, 1);
+
       if (!this.visitedTabs.length) {
         this.activeTabKey = "";
-      } else if (isActive) {
-        const next = this.visitedTabs[index] || this.visitedTabs[index - 1] || this.visitedTabs[0];
-        this.activeTabKey = next.key;
+        persistTabsState(this.$state);
+        return "";
       }
 
-      this.syncCachedViews();
-      persistState(this.$state);
-      return this.getActivePath();
-    },
-    closeOtherTabs(key: string) {
-      const kept = this.visitedTabs.filter((tab) => tab.affix || tab.key === key);
-      this.visitedTabs = kept;
-      const exists = kept.some((tab) => tab.key === this.activeTabKey);
-      if (!exists) {
-        this.activeTabKey = key;
+      if (!isActive) {
+        persistTabsState(this.$state);
+        return "";
       }
-      this.syncCachedViews();
-      persistState(this.$state);
-      return this.getActivePath();
+
+      const nextIndex = index < this.visitedTabs.length ? index : this.visitedTabs.length - 1;
+      const nextTab = this.visitedTabs[nextIndex];
+      this.activeTabKey = nextTab.key;
+      persistTabsState(this.$state);
+      return nextTab.fullPath;
+    },
+    getTabByKey(key: string): AppTabItem | undefined {
+      return this.visitedTabs.find((item) => item.key === key);
+    },
+    getActivePath(): string {
+      if (!this.visitedTabs.length) {
+        return "";
+      }
+      const active = this.getTabByKey(this.activeTabKey);
+      return active?.fullPath || this.visitedTabs[0].fullPath;
     },
     restore() {
-      const restored = readState();
+      const restored = readTabsState();
       this.visitedTabs = restored.visitedTabs;
-      this.activeTabKey = restored.activeTabKey;
-      this.cachedViewKeys = restored.cachedViewKeys;
+      const hasActive =
+        restored.activeTabKey &&
+        restored.visitedTabs.some((item) => item.key === restored.activeTabKey);
+      this.activeTabKey = hasActive ? restored.activeTabKey : restored.visitedTabs[0]?.key || "";
+      persistTabsState(this.$state);
     },
     reset() {
-      this.visitedTabs = [];
       this.activeTabKey = "";
-      this.cachedViewKeys = [];
+      this.visitedTabs = [];
       localStorage.removeItem(TABS_STORAGE_KEY);
-    },
-    getTabByKey(key: string) {
-      return this.visitedTabs.find((tab) => tab.key === key);
-    },
-    getActivePath() {
-      const active = this.getTabByKey(this.activeTabKey);
-      return active?.fullPath || "";
-    },
-    syncCachedViews() {
-      const cacheNames = this.visitedTabs
-        .filter((tab) => tab.cacheable)
-        .map((tab) => tab.name)
-        .filter((name, index, arr) => arr.indexOf(name) === index);
-      this.cachedViewKeys = cacheNames;
     }
   }
 });

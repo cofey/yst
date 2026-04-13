@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring Bean 构造注入的 EI_EXPOSE_REP2 误报 -->
+    <Match>
+        <Or>
+            <Class name="~.*\.controller\..*" />
+            <Class name="~.*\.service\.impl\..*" />
+            <Class name="~.*\.filter\..*" />
+            <Class name="~.*\.component\..*" />
+            <Class name="~.*\.config\..*" />
+            <Class name="~.*\.security\..*" />
+        </Or>
+        <Bug pattern="EI_EXPOSE_REP2" />
+    </Match>
+</FindBugsFilter>

@@ -1,17 +1,10 @@
 import type { RouteRecordRaw } from "vue-router";
-import HomePage from "@/modules/home/pages/index.vue";
-import UserPage from "@/modules/system/user/pages/index.vue";
-import RolePage from "@/modules/system/role/pages/index.vue";
-import MenuPage from "@/modules/system/menu/pages/index.vue";
-import CompanyPage from "@/modules/system/company/pages/index.vue";
-import DictPage from "@/modules/system/dict/pages/index.vue";
-import DictDataPage from "@/modules/system/dict/pages/data.vue";
 
 export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/home",
     name: "home",
-    component: HomePage,
+    component: () => import("@/modules/home/pages/index.vue"),
     meta: {
       title: "首页",
       affix: true,
@@ -23,7 +16,7 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/system/users",
     name: "users",
-    component: UserPage,
+    component: () => import("@/modules/system/user/pages/index.vue"),
     meta: {
       title: "用户管理",
       cache: true,
@@ -34,7 +27,7 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/system/roles",
     name: "roles",
-    component: RolePage,
+    component: () => import("@/modules/system/role/pages/index.vue"),
     meta: {
       title: "角色管理",
       cache: true,
@@ -45,7 +38,7 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/system/menus",
     name: "menus",
-    component: MenuPage,
+    component: () => import("@/modules/system/menu/pages/index.vue"),
     meta: {
       title: "菜单管理",
       cache: true,
@@ -56,7 +49,7 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/system/companies",
     name: "companies",
-    component: CompanyPage,
+    component: () => import("@/modules/system/company/pages/index.vue"),
     meta: {
       title: "单位管理",
       cache: true,
@@ -67,7 +60,7 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/system/dicts",
     name: "dicts",
-    component: DictPage,
+    component: () => import("@/modules/system/dict/pages/index.vue"),
     meta: {
       title: "字典管理",
       cache: true,
@@ -78,7 +71,7 @@ export const systemRoutes: RouteRecordRaw[] = [
   {
     path: "/system/dicts/:dictType/data",
     name: "dict-data",
-    component: DictDataPage,
+    component: () => import("@/modules/system/dict/pages/data.vue"),
     meta: {
       title: "字典数据",
       cache: true,

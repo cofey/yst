@@ -33,7 +33,11 @@
             </el-select>
           </div>
           <div class="toolbar-actions right-actions">
-            <el-button v-hasPermi="['system:company:list']" class="toolbar-btn" type="primary" @click="handleQuery"
+            <el-button
+              v-hasPermi="['system:company:list']"
+              class="toolbar-btn"
+              type="primary"
+              @click="handleQuery"
               >查询</el-button
             >
             <el-button class="toolbar-btn" @click="handleReset">重置</el-button>
@@ -42,8 +46,27 @@
       </div>
 
       <div class="table-tools">
-        <el-button v-hasPermi="['system:company:add']" class="toolbar-btn" type="success" @click="openCreate"
+        <el-button
+          v-hasPermi="['system:company:add']"
+          class="toolbar-btn"
+          type="success"
+          @click="openCreate"
           >新增</el-button
+        >
+        <el-upload
+          v-hasPermi="['system:company:import']"
+          :show-file-list="false"
+          :before-upload="importExcel"
+          accept=".xlsx,.xls"
+        >
+          <el-button class="toolbar-btn" type="warning">导入</el-button>
+        </el-upload>
+        <el-button
+          v-hasPermi="['system:company:export']"
+          class="toolbar-btn"
+          type="info"
+          @click="exportExcel"
+          >导出</el-button
         >
       </div>
 
@@ -53,7 +76,7 @@
         <el-table-column prop="companyName" label="单位名称" min-width="200" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <dict-tag :options="statusOptions" :value="row.status" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" min-width="180">
@@ -117,18 +140,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { getCurrentInstance, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
+import type { UploadRawFile } from "element-plus";
 import {
   createCompanyApi,
   deleteCompanyApi,
+  exportCompaniesApi,
+  importCompaniesApi,
   listCompaniesApi,
   updateCompanyApi
 } from "@/modules/system/company/api";
 import { useAuthStore } from "@/stores/auth";
 import type { CompanyItem } from "@/modules/system/company/types";
-import type { DictOptionItem } from "@/modules/system/dict/types";
-import { getDictLabel, getDictTagType, loadDictOptions } from "@/composables/useDict";
 import { formatDateTime } from "@/shared/utils/datetime";
 
 defineOptions({
@@ -136,6 +160,8 @@ defineOptions({
 });
 
 const authStore = useAuthStore();
+const { proxy } = getCurrentInstance()!;
+const { sys_common_status: statusOptions } = proxy.useDict("sys_common_status");
 
 const query = reactive({
   companyCode: "",
@@ -151,7 +177,6 @@ const page = reactive({
 });
 
 const tableData = ref<CompanyItem[]>([]);
-const statusOptions = ref<DictOptionItem[]>([]);
 const dialogVisible = ref(false);
 const editingId = ref<string | null>(null);
 const form = reactive({
@@ -249,15 +274,23 @@ const remove = async (companyId: string) => {
   }
 };
 
-const statusLabel = (value: number) => getDictLabel(statusOptions.value, String(value), "-");
+const importExcel = async (file: UploadRawFile) => {
+  await importCompaniesApi(file);
+  ElMessage.success("导入成功");
+  if (queried.value) {
+    await loadCompanyPage();
+  }
+  return false;
+};
 
-const statusTagType = (value: number) => getDictTagType(statusOptions.value, String(value));
+const exportExcel = async () => {
+  await exportCompaniesApi("单位列表.xlsx");
+};
 
 onMounted(async () => {
   if (!authStore.hasPermi("system:company:list")) {
     return;
   }
-  statusOptions.value = await loadDictOptions("sys_common_status");
   await handleQuery();
 });
 </script>

@@ -27,13 +27,21 @@
             </el-select>
           </div>
           <div class="toolbar-actions right-actions">
-            <el-button v-hasPermi="['system:dict:list']" class="toolbar-btn" type="primary" @click="handleQuery"
+            <el-button
+              v-hasPermi="['system:dict:list']"
+              class="toolbar-btn"
+              type="primary"
+              @click="handleQuery"
               >查询</el-button
             >
             <el-button class="toolbar-btn" @click="handleReset">重置</el-button>
-            <el-button class="toolbar-btn toolbar-btn-toggle" link type="primary" @click="showMore = !showMore">{{
-              showMore ? "收起" : "展开"
-            }}</el-button>
+            <el-button
+              class="toolbar-btn toolbar-btn-toggle"
+              link
+              type="primary"
+              @click="showMore = !showMore"
+              >{{ showMore ? "收起" : "展开" }}</el-button
+            >
           </div>
         </div>
       </div>
@@ -80,7 +88,7 @@
         </el-table-column>
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ statusLabel(row.status) }}</el-tag>
+            <dict-tag :options="statusOptions" :value="row.status" />
           </template>
         </el-table-column>
         <el-table-column label="创建时间" min-width="180">
@@ -166,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useRoute, useRouter } from "vue-router";
 import {
@@ -178,13 +186,8 @@ import {
   updateDictDataApi
 } from "@/modules/system/dict/api";
 import { useAuthStore } from "@/stores/auth";
-import {
-  clearDictCache,
-  getDictLabel,
-  getDictTagType,
-  loadDictOptions
-} from "@/composables/useDict";
-import type { DictDataItem, DictOptionItem } from "@/modules/system/dict/types";
+import { clearDictCache } from "@/modules/system/dict/dict";
+import type { DictDataItem } from "@/modules/system/dict/types";
 import { formatDateTime } from "@/shared/utils/datetime";
 
 defineOptions({
@@ -194,6 +197,8 @@ defineOptions({
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { proxy } = getCurrentInstance()!;
+const { sys_common_status: statusOptions } = proxy.useDict("sys_common_status");
 
 const currentDictType = computed(() => String(route.params.dictType || ""));
 const pageTitle = computed(() => {
@@ -215,7 +220,6 @@ const page = reactive({
 });
 
 const dictDataTable = ref<DictDataItem[]>([]);
-const statusOptions = ref<DictOptionItem[]>([]);
 const dataDialogVisible = ref(false);
 const editingDataCode = ref<string | null>(null);
 const dataForm = reactive({
@@ -357,10 +361,6 @@ const clearAllCache = async () => {
   ElMessage.success("已清理全部字典缓存");
 };
 
-const statusLabel = (value: number) => getDictLabel(statusOptions.value, String(value), "-");
-
-const statusTagType = (value: number) => getDictTagType(statusOptions.value, String(value));
-
 watch(
   () => currentDictType.value,
   () => {
@@ -372,10 +372,6 @@ watch(
 onMounted(async () => {
   if (!authStore.hasPermi("system:dict:list")) {
     return;
-  }
-  const statuses = await loadDictOptions("sys_common_status");
-  if (statuses.length) {
-    statusOptions.value = statuses;
   }
   resetDataForm();
   await handleQuery();

@@ -61,67 +61,67 @@ function persistStorageState(state: AuthState) {
 export const useAuthStore = defineStore<"auth", AuthState, Record<string, never>, AuthActions>(
   "auth",
   {
-  state: (): AuthState => readStorageState(),
-  actions: {
-    setAuth(payload: {
-      token: string;
-      userId: string;
-      username: string;
-      roles?: string[];
-      permissions?: string[];
-    }) {
-      const roles = payload.roles || [];
-      const permissions = payload.permissions || [];
-      this.token = payload.token;
-      this.userId = payload.userId;
-      this.username = payload.username;
-      this.roles = roles;
-      this.permissions = permissions;
-      persistStorageState(this.$state);
-    },
-    setAuthz(roles: string[], permissions: string[]) {
-      this.roles = roles;
-      this.permissions = permissions;
-      persistStorageState(this.$state);
-    },
-    setMenus(menus: MenuTreeItem[]) {
-      this.menus = menus || [];
-      persistStorageState(this.$state);
-    },
-    hasMenuPath(path: string) {
-      if (!path || path === "/home") {
-        return true;
-      }
-      const stack = [...this.menus];
-      while (stack.length) {
-        const item = stack.pop()!;
-        if (item.path && (item.path === path || path.startsWith(`${item.path}/`))) {
+    state: (): AuthState => readStorageState(),
+    actions: {
+      setAuth(payload: {
+        token: string;
+        userId: string;
+        username: string;
+        roles?: string[];
+        permissions?: string[];
+      }) {
+        const roles = payload.roles || [];
+        const permissions = payload.permissions || [];
+        this.token = payload.token;
+        this.userId = payload.userId;
+        this.username = payload.username;
+        this.roles = roles;
+        this.permissions = permissions;
+        persistStorageState(this.$state);
+      },
+      setAuthz(roles: string[], permissions: string[]) {
+        this.roles = roles;
+        this.permissions = permissions;
+        persistStorageState(this.$state);
+      },
+      setMenus(menus: MenuTreeItem[]) {
+        this.menus = menus || [];
+        persistStorageState(this.$state);
+      },
+      hasMenuPath(path: string) {
+        if (!path || path === "/home") {
           return true;
         }
-        if (item.children?.length) {
-          stack.push(...item.children);
+        const stack = [...this.menus];
+        while (stack.length) {
+          const item = stack.pop()!;
+          if (item.path && (item.path === path || path.startsWith(`${item.path}/`))) {
+            return true;
+          }
+          if (item.children?.length) {
+            stack.push(...item.children);
+          }
         }
+        return false;
+      },
+      hasPermi(permission: string) {
+        return this.roles.includes("admin") || this.permissions.includes(permission);
+      },
+      clearAuth() {
+        this.token = "";
+        this.userId = "";
+        this.username = "";
+        this.roles = [];
+        this.permissions = [];
+        this.menus = [];
+        localStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem("token");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("username");
+        localStorage.removeItem("roles");
+        localStorage.removeItem("permissions");
+        localStorage.removeItem("menus");
       }
-      return false;
-    },
-    hasPermi(permission: string) {
-      return this.roles.includes("admin") || this.permissions.includes(permission);
-    },
-    clearAuth() {
-      this.token = "";
-      this.userId = "";
-      this.username = "";
-      this.roles = [];
-      this.permissions = [];
-      this.menus = [];
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem("token");
-      localStorage.removeItem("userId");
-      localStorage.removeItem("username");
-      localStorage.removeItem("roles");
-      localStorage.removeItem("permissions");
-      localStorage.removeItem("menus");
     }
   }
-}
 );

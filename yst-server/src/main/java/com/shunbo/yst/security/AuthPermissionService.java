@@ -2,23 +2,27 @@ package com.shunbo.yst.security;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.shunbo.yst.modules.system.user.entity.SysUser;
-import com.shunbo.yst.modules.system.user.mapper.SysUserMapper;
+
+import com.shunbo.yst.modules.system.entity.SysUser;
+import com.shunbo.yst.modules.system.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AuthPermissionService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthPermissionService.class);
     private static final String LOGIN_USER_CACHE_KEY_PREFIX = "auth:login_user:";
     private static final Duration LOGIN_USER_CACHE_TTL = Duration.ofMinutes(30);
 
@@ -47,21 +51,14 @@ public class AuthPermissionService {
         return loginUser;
     }
 
-    public List<String> listRoleKeys(String userId) {
-        return sysUserMapper.selectRoleKeysByUserId(userId);
-    }
-
-    public List<String> listPermissions(String userId) {
-        return sysUserMapper.selectPermissionsByUserId(userId);
-    }
-
     public void evictLoginUser(String userId) {
         if (!StringUtils.hasText(userId)) {
             return;
         }
         try {
             redisTemplate.delete(buildLoginUserKey(userId));
-        } catch (Exception ignored) {
+        } catch (RuntimeException e) {
+            LOGGER.warn("清理登录用户缓存失败, userId={}", userId, e);
         }
     }
 
@@ -80,7 +77,8 @@ public class AuthPermissionService {
         }
         try {
             redisTemplate.delete(keys);
-        } catch (Exception ignored) {
+        } catch (RuntimeException e) {
+            LOGGER.warn("批量清理登录用户缓存失败", e);
         }
     }
 
@@ -91,7 +89,8 @@ public class AuthPermissionService {
                 return;
             }
             redisTemplate.delete(keys);
-        } catch (Exception ignored) {
+        } catch (RuntimeException e) {
+            LOGGER.warn("清理全部登录用户缓存失败", e);
         }
     }
 
@@ -105,7 +104,8 @@ public class AuthPermissionService {
                 return null;
             }
             return objectMapper.readValue(raw, LoginUser.class);
-        } catch (Exception ignored) {
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("读取登录用户缓存失败, userId={}", userId, e);
             return null;
         }
     }
@@ -120,7 +120,8 @@ public class AuthPermissionService {
                     objectMapper.writeValueAsString(loginUser),
                     LOGIN_USER_CACHE_TTL
             );
-        } catch (Exception ignored) {
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("写入登录用户缓存失败, userId={}", userId, e);
         }
     }
 

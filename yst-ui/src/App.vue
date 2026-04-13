@@ -14,11 +14,7 @@
             :default-active="activeMenu"
             @select="handleSelect"
           >
-            <TopNavMenuNode
-              v-for="menu in authStore.menus"
-              :key="menu.menuId"
-              :node="menu"
-            />
+            <TopNavMenuNode v-for="menu in authStore.menus" :key="menu.menuId" :node="menu" />
           </el-menu>
         </div>
       </div>
@@ -132,12 +128,11 @@ const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase());
 const activeTabIndex = computed(() =>
   tabsStore.visitedTabs.findIndex((tab) => tab.key === tabsStore.activeTabKey)
 );
-const canSwitchPrev = computed(
-  () => tabsStore.visitedTabs.length > 1 && activeTabIndex.value > 0
-);
+const canSwitchPrev = computed(() => tabsStore.visitedTabs.length > 1 && activeTabIndex.value > 0);
 const canSwitchNext = computed(
   () =>
-    tabsStore.visitedTabs.length > 1 && activeTabIndex.value >= 0 &&
+    tabsStore.visitedTabs.length > 1 &&
+    activeTabIndex.value >= 0 &&
     activeTabIndex.value < tabsStore.visitedTabs.length - 1
 );
 
@@ -547,7 +542,6 @@ watch(
   color: #344054;
   background: #e8ecf3;
 }
-
 </style>
 
 <style>

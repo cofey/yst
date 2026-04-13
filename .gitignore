@@ -2,10 +2,10 @@
 .DS_Store
 SmartST2020/
 .pnpm-store/
+tools/sonarqube-9.9.6/
 
 # Build
 target/
-tools/sonarqube
 
 # IDE
 .idea/
